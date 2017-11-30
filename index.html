@@ -10,6 +10,7 @@
   <canvas id="canvas">
     HTML5 is not supported.
   </canvas>
+  <!-- <img src="wave1a.png"/> -->
 
   
   <!-- vertex shader -->
@@ -169,9 +170,28 @@
   <script id="2d-fragment-shader" type="x-shader/x-fragment">
     precision lowp float;
     
-    // our texture
     uniform sampler2D u_image;
+
+    // the texCoords passed in from the vertex shader.
+    varying vec2 v_texCoord;
     
+    void main() {
+      vec4 color = texture2D(u_image, v_texCoord);
+      // color.a = smoothstep(0.00, 0.01, color.r + color.g + color.b);
+      color.a = min(0.8, color.a); //set variable here for opacity
+      // color.a = step(0.01, color.r + color.g + color.b); // remove black and make it transparent
+      color.b = v_texCoord.x;
+      color.g = v_texCoord.y;
+      gl_FragColor = color;
+    }
+  </script>
+  <script id="2d-fragment-shader-spin" type="x-shader/x-fragment">
+    precision lowp float;
+    
+    uniform sampler2D u_image;
+    uniform float u_colour_change;
+    uniform float u_spin_time;
+
     // the texCoords passed in from the vertex shader.
     varying vec2 v_texCoord;
     
@@ -179,8 +199,9 @@
       vec4 color = texture2D(u_image, v_texCoord);
       // color.a = smoothstep(0.00, 0.01, color.r + color.g + color.b);
       color.a = min(0.8, color.a);
+      color.r = u_spin_time;
       // color.a = step(0.01, color.r + color.g + color.b); // remove black and make it transparent
-      color.r = v_texCoord.x;
+      color.b = v_texCoord.x;
       color.g = v_texCoord.y;
       gl_FragColor = color;
     }

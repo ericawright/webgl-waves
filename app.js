@@ -1,5 +1,8 @@
 "use strict"
 
+var t_starttime = performance.now();
+var textures = [];
+
 // utility Functions
 
 function resizeCanvasToDisplaySize(canvas, multiplier) {
@@ -99,59 +102,20 @@ function createProgramFromScripts(
   return createProgram(gl, vertexShader, fragmentShader);
 }
 
-
-
-// start
 function InitDemo() {
-  console.log('init');
-  var images = [];
-  var urls = [
-    "wave1a.png",
-    "wave2a.png",
-    "wave3b.png",
-    "wave4a.png",
-    "wave5a.png",
-    "wave6a.png",
-    "wave7a.png",
-    "wave8a.png"
-  ];
-  var imagesToLoad = urls.length;
-
-  function loadImage(url, callback) {
-    var image = new Image();
-    image.src = url;
-    image.width = "2048";
-    image.height = "2048";
-    image.onload = callback;
-    return image;
-  }
-  var onImageLoad = function() {
-    --imagesToLoad;
-    // If all the images are loaded call the callback.
-    if (imagesToLoad == 0) {
-      render(images);
-    }
-  };
-  
-  for (var i = 0; i < urls.length; ++i) {
-    var image = loadImage(urls[i], onImageLoad);
-    images.push(image);
-  }
-
-}
-
-function render(images) {
   // Get A WebGL context
-  /** @type {HTMLCanvasElement} */
+  console.log('before canvas object : ',  performance.now() - t_starttime);
   var canvas = document.getElementById("canvas");
   var gl = canvas.getContext("webgl");
   if (!gl) {
     return;
   }
+  initImages();
+  console.log('after canvas and webgl context : ',  performance.now() - t_starttime);
 
   // setup GLSL program
   var program = createProgramFromScripts(gl, ["2d-vertex-shader", "2d-fragment-shader"]);
-  var spinProgram = createProgramFromScripts(gl, ["2d-vertex-shader-spin", "2d-fragment-shader"]);
+  var spinProgram = createProgramFromScripts(gl, ["2d-vertex-shader-spin", "2d-fragment-shader-spin"]);
 
   // look up where the vertex data needs to go.
   var positionLocation = gl.getAttribLocation(program, "a_position");
@@ -177,24 +141,6 @@ function render(images) {
       1.0,  0.0,
       1.0,  1.0,
   ]), gl.STATIC_DRAW);
-  
-  var textures = [];
-  images.forEach((image) => {
-    var texture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-
-    // Set the parameters so we can render any size image.
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-
-    // Upload the image into the texture.
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-
-    // add the texture to the array of textures.
-    textures.push(texture);
-  });
 
   // lookup uniforms
   var resolutionLocation = gl.getUniformLocation(program, "u_resolution");
@@ -208,7 +154,8 @@ function render(images) {
   var ySkewVarienceLocation = gl.getUniformLocation(program, "u_y_skew_varience");
   var xTranslateLocation = gl.getUniformLocation(program, "u_x_translate");
   var yTranslateLocation = gl.getUniformLocation(program, "u_y_translate");
-  
+  var imageLocation = gl.getUniformLocation(program, "u_image");
+
   resizeCanvasToDisplaySize(gl.canvas);
 
   // Tell WebGL how to convert from clip space to pixels
@@ -242,7 +189,7 @@ function render(images) {
   gl.enableVertexAttribArray(texcoordLocation);
   gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
 
-  // Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
+
   var size = 2;          // 2 components per iteration
   var type = gl.FLOAT;   // the data is 32bit floats
   var normalize = false; // don't normalize the data
@@ -261,8 +208,69 @@ function render(images) {
 
   var timeLocation = gl.getUniformLocation(program, "u_time");
   
+  function initImages() {
+    console.log('init time : ', performance.now() - t_starttime);
+    var images = [];
+    var urls = [
+      "wave1a.png",
+      "wave2a.png",
+      "wave3b.png",
+      "wave4a.png",
+      "wave5a.png",
+      "wave6a.png",
+      "wave7a.png",
+      "wave8a.png"
+    ];
+    var imagesToLoad = urls.length;
+
+    function loadImage(url, callback) {
+      var image = new Image();
+      image.src = url;
+      image.width = "2048";
+      image.height = "2048";
+      image.onload = callback;
+      return image;
+    }
+    var onImageLoad = function(event) {
+      --imagesToLoad;
+      
+      var image_index = urls.indexOf(event.target.attributes.src.value);
+      
+      console.log('before binding texture : ', performance.now() - t_starttime);
+      
+      var texture = gl.createTexture();
+      gl.activeTexture(gl.TEXTURE0 + image_index);
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+
+      // Set the parameters so we can render any size image.
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+      // Upload the image into the texture.
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, event.target);
+
+      // add the texture to the array of textures.
+      textures[image_index] = texture;
+      
+      // If all the images are loaded call the callback.
+      if (imagesToLoad == 0) {
+        console.log('after all images loaded : ', performance.now() - t_starttime);
+        requestAnimationFrame(animate);
+      }
+    };
+    
+    for (var i = 0; i < urls.length; ++i) {
+      var image = loadImage(urls[i], onImageLoad);
+      images.push(image);
+    }
+  }
+  
+  
+  
   function buildImages(time, movement) {
-    gl.bindTexture(gl.TEXTURE_2D, textures[movement.texture]);
+    gl.uniform1i(imageLocation, movement.texture);
     gl.uniform1f(xScaleBaseLocation, movement.xScaleBase);
     gl.uniform1f(yScaleBaseLocation, movement.yScaleBase);
     gl.uniform1f(xScaleVarienceLocation, movement.xScaleVarience);
@@ -464,6 +472,7 @@ function render(images) {
   var waveDeltaTime = 0;
 
   function animate(time) {
+    // console.log("animate")
     waveDeltaTime = time - waveStartTime;
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     buildImages(waveDeltaTime, wave1Movement);
@@ -478,7 +487,6 @@ function render(images) {
      myReq = window.requestAnimationFrame(animate);
   }
   
-  animate(performance.now);
 
   // Change to rotation/spin shaders on keypress
   function handleKeyUp () {
@@ -489,6 +497,7 @@ function render(images) {
     var spinDegreesLocation = gl.getUniformLocation(spinProgram, "u_degrees");
     var spinXTranslateLocation = gl.getUniformLocation(spinProgram, "u_x_spin_translate");
     var spinYTranslateLocation = gl.getUniformLocation(spinProgram, "u_y_spin_translate");
+    var spinFragTimeLocation = gl.getUniformLocation(spinProgram, "u_spin_time");
     var endTimeLocation = gl.getUniformLocation(spinProgram, "u_old_end_time");
     
     var resolutionLocation = gl.getUniformLocation(spinProgram, "u_resolution");
@@ -502,11 +511,12 @@ function render(images) {
     var ySkewVarienceLocation = gl.getUniformLocation(spinProgram, "u_y_skew_varience");
     var xTranslateLocation = gl.getUniformLocation(spinProgram, "u_x_translate");
     var yTranslateLocation = gl.getUniformLocation(spinProgram, "u_y_translate");
+    var spinImageLocation = gl.getUniformLocation(spinProgram, "u_image");
+    //TODO do these need to be "var" again? ^
     
     gl.uniform2f(spinResolutionLocation, gl.canvas.width, gl.canvas.height);
     
     function drawWaveSpin (time, movement) {
-      console.log("wavedelta time: ", waveDeltaTime)
       // wave uniforms
       gl.uniform1f(xScaleBaseLocation, movement.xScaleBase);
       gl.uniform1f(yScaleBaseLocation, movement.yScaleBase);
@@ -519,16 +529,18 @@ function render(images) {
       gl.uniform1f(xTranslateLocation, movement.translateX);
       gl.uniform1f(yTranslateLocation, movement.translateY);
       
-      //s pin uniforms
+      // spin uniforms
       gl.uniform1f(spinXTranslateLocation, movement.spin_translateX);
       gl.uniform1f(spinYTranslateLocation, movement.spin_translateY);
       gl.uniform1f(spinDegreesLocation, movement.spin_radians);
       gl.uniform1f(endTimeLocation, ((waveDeltaTime * movement.speed) + movement.delay) % movement.period);
       
       gl.uniform1f(spinTimeLocation, (time * movement.spin_speed) + movement.spin_delay);
-      gl.bindTexture(gl.TEXTURE_2D, textures[movement.texture]);
+      gl.uniform1f(spinFragTimeLocation, (time * movement.spin_speed) + -1.0);
+      gl.uniform1i(spinImageLocation, movement.texture); // Point at correct texture
       gl.drawArrays(primitiveType, offset, count);
     }
+
     var deltaTime = 0;
     var startTime = performance.now();
     function spinOutAnimation(time) {
