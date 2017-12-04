@@ -10,8 +10,6 @@
   <canvas id="canvas">
     HTML5 is not supported.
   </canvas>
-  <!-- <img src="wave1a.png"/> -->
-
   
   <!-- vertex shader -->
   <script id="2d-vertex-shader-spin" type="x-shader/x-vertex">
@@ -143,16 +141,14 @@
     float y_scale = u_y_scale_base + u_y_scale_varience * (sin(time) + 1.0);
     float x_scale = u_x_scale_base + u_x_scale_varience * (sin(time) + 1.0);
     zeroToOne = scale(vec2(x_scale, y_scale)) * zeroToOne;
-    
-    // float skew_time = max(u_time, 0.0);
-    // skew_time = min(u_time, PI);
+
     float x_skew = u_x_skew_varience * (sin(time) + 1.0);
     float y_skew = u_y_skew_varience * (sin(time) + 1.0);
     zeroToOne = zeroToOne * skew(vec2(x_skew, y_skew));
     
     zeroToOne -= vec2(u_x_coord, u_y_coord); //initial positioning
     zeroToOne -= vec2(u_x_translate * (sin(time) + 1.0), u_y_translate * (sin(time) + 1.0));
-    
+
     zeroToOne += vec2(0.5); //return back to desired position
 
     // convert from 0->1 to 0->2
@@ -171,12 +167,18 @@
     precision lowp float;
     
     uniform sampler2D u_image;
+    uniform float u_width;
+    uniform float u_offset;
 
     // the texCoords passed in from the vertex shader.
     varying vec2 v_texCoord;
     
     void main() {
-      vec4 color = texture2D(u_image, v_texCoord);
+      vec2 texture_point = v_texCoord;
+      texture_point.x *= u_width;
+      texture_point.x += u_offset;
+      vec4 color = texture2D(u_image, texture_point);
+      // vec4 color = texture2D(u_image, v_texCoord);
       // color.a = smoothstep(0.00, 0.01, color.r + color.g + color.b);
       color.a = min(0.8, color.a); //set variable here for opacity
       // color.a = step(0.01, color.r + color.g + color.b); // remove black and make it transparent
@@ -191,12 +193,18 @@
     uniform sampler2D u_image;
     uniform float u_colour_change;
     uniform float u_spin_time;
+    uniform float u_width;
+    uniform float u_offset;
 
     // the texCoords passed in from the vertex shader.
     varying vec2 v_texCoord;
     
     void main() {
-      vec4 color = texture2D(u_image, v_texCoord);
+      vec2 texture_point = v_texCoord;
+      // Select the correct potion of the image atlas map
+      texture_point.x *= u_width;
+      texture_point.x += u_offset;
+      vec4 color = texture2D(u_image, texture_point);
       // color.a = smoothstep(0.00, 0.01, color.r + color.g + color.b);
       color.a = min(0.8, color.a);
       color.r = u_spin_time;

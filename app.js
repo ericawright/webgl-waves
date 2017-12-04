@@ -1,7 +1,6 @@
 "use strict"
 
 var t_starttime = performance.now();
-var textures = [];
 
 // utility Functions
 
@@ -110,7 +109,7 @@ function InitDemo() {
   if (!gl) {
     return;
   }
-  initImages();
+
   console.log('after canvas and webgl context : ',  performance.now() - t_starttime);
 
   // setup GLSL program
@@ -133,6 +132,7 @@ function InitDemo() {
   // provide texture coordinates for the rectangle.
   var texcoordBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
+  // set co-ordinates for texture map. Using atlas mapping.
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
       0.0,  0.0,
       1.0,  0.0,
@@ -140,6 +140,64 @@ function InitDemo() {
       0.0,  1.0,
       1.0,  0.0,
       1.0,  1.0,
+      
+      
+  // select the first image
+  // 0.0,  0.0,
+  // 0.123,  0.0,
+  // 0.0,  1.0,
+  // 0.0,  1.0,
+  // 0.123,  0.0,
+  // 0.123,  1.0,
+  
+  // 0.124,  0.0,
+  // 0.247,  0.0,
+  // 0.124,  1.0,
+  // 0.124,  1.0,
+  // 0.247,  0.0,
+  // 0.247,  1.0,
+  
+  // 0   , 0  ,
+  // 0   , 0.5,
+  // 0.25, 0  ,
+  // 0   , 0.5,
+  // 0.25, 0.5,
+  // 0.25, 0  ,
+  // // select the bottom middle image
+  // 0.25, 0  ,
+  // 0.5 , 0  ,
+  // 0.25, 0.5,
+  // 0.25, 0.5,
+  // 0.5 , 0  ,
+  // 0.5 , 0.5,
+  // // select to bottom right image
+  // 0.5 , 0  ,
+  // 0.5 , 0.5,
+  // 0.75, 0  ,
+  // 0.5 , 0.5,
+  // 0.75, 0.5,
+  // 0.75, 0  ,
+  // // select the top left image
+  // 0   , 0.5,
+  // 0.25, 0.5,
+  // 0   , 1  ,
+  // 0   , 1  ,
+  // 0.25, 0.5,
+  // 0.25, 1  ,
+  // // select the top middle image
+  // 0.25, 0.5,
+  // 0.25, 1  ,
+  // 0.5 , 0.5,
+  // 0.25, 1  ,
+  // 0.5 , 1  ,
+  // 0.5 , 0.5,
+  // // select the top right image
+  // 0.5 , 0.5,
+  // 0.75, 0.5,
+  // 0.5 , 1  ,
+  // 0.5 , 1  ,
+  // 0.75, 0.5,
+  // 0.75, 1  ,
   ]), gl.STATIC_DRAW);
 
   // lookup uniforms
@@ -155,6 +213,8 @@ function InitDemo() {
   var xTranslateLocation = gl.getUniformLocation(program, "u_x_translate");
   var yTranslateLocation = gl.getUniformLocation(program, "u_y_translate");
   var imageLocation = gl.getUniformLocation(program, "u_image");
+  var offsetLocation = gl.getUniformLocation(program, "u_offset");
+  var widthLocation = gl.getUniformLocation(program, "u_width");
 
   resizeCanvasToDisplaySize(gl.canvas);
 
@@ -208,38 +268,21 @@ function InitDemo() {
 
   var timeLocation = gl.getUniformLocation(program, "u_time");
   
-  function initImages() {
+  var initImages = function() {
     console.log('init time : ', performance.now() - t_starttime);
-    var images = [];
-    var urls = [
-      "wave1a.png",
-      "wave2a.png",
-      "wave3b.png",
-      "wave4a.png",
-      "wave5a.png",
-      "wave6a.png",
-      "wave7a.png",
-      "wave8a.png"
-    ];
-    var imagesToLoad = urls.length;
+    var url = "all-wavesa.png";
 
-    function loadImage(url, callback) {
+    var loadImage = function (url, callback) {
       var image = new Image();
       image.src = url;
-      image.width = "2048";
-      image.height = "2048";
       image.onload = callback;
       return image;
-    }
+    };
     var onImageLoad = function(event) {
-      --imagesToLoad;
-      
-      var image_index = urls.indexOf(event.target.attributes.src.value);
       
       console.log('before binding texture : ', performance.now() - t_starttime);
       
       var texture = gl.createTexture();
-      gl.activeTexture(gl.TEXTURE0 + image_index);
       gl.bindTexture(gl.TEXTURE_2D, texture);
 
       // Set the parameters so we can render any size image.
@@ -251,26 +294,17 @@ function InitDemo() {
       // Upload the image into the texture.
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, event.target);
 
-      // add the texture to the array of textures.
-      textures[image_index] = texture;
-      
-      // If all the images are loaded call the callback.
-      if (imagesToLoad == 0) {
-        console.log('after all images loaded : ', performance.now() - t_starttime);
-        requestAnimationFrame(animate);
-      }
+      requestAnimationFrame(animate);
     };
-    
-    for (var i = 0; i < urls.length; ++i) {
-      var image = loadImage(urls[i], onImageLoad);
-      images.push(image);
-    }
+    loadImage(url, onImageLoad);
   }
-  
-  
-  
+  initImages();
+
+  gl.uniform1i(imageLocation, 0);
+  gl.uniform1f(widthLocation, .123);
+    
   function buildImages(time, movement) {
-    gl.uniform1i(imageLocation, movement.texture);
+    gl.uniform1f(offsetLocation, movement.texture_offset);
     gl.uniform1f(xScaleBaseLocation, movement.xScaleBase);
     gl.uniform1f(yScaleBaseLocation, movement.yScaleBase);
     gl.uniform1f(xScaleVarienceLocation, movement.xScaleVarience);
@@ -298,7 +332,7 @@ function InitDemo() {
     translateY: 0.0,
     delay: 0.0,
     speed: 0.0015,
-    texture: 0,
+    texture_offset: 0.0,
     period: 11,
     
     spin_delay: -2.0,
@@ -320,7 +354,7 @@ function InitDemo() {
     translateY: 0.0,
     delay: 0.0,
     speed: 0.0016,
-    texture: 1,
+    texture_offset: 0.124,
     period: 11,
     
     spin_delay: -1.0,
@@ -342,7 +376,7 @@ function InitDemo() {
     translateY: 0.0,
     delay: 0.0,
     speed: 0.0011,
-    texture: 2,
+    texture_offset: 0.2495,
     period: 11,
     
     spin_delay: -1.0,
@@ -364,7 +398,7 @@ function InitDemo() {
     translateY: 0.0,
     delay: 0.0,
     speed: 0.00018,
-    texture: 3,
+    texture_offset: 0.3735,
     period: 11,
     
     spin_delay: -1.0,
@@ -387,7 +421,7 @@ function InitDemo() {
     translateY: -0.1,
     delay: 0.0,
     speed: 0.0005,
-    texture: 4,
+    texture_offset: 0.4965,
     period: (4 * Math.PI),
     
     spin_delay: -1.0,
@@ -410,7 +444,7 @@ function InitDemo() {
     translateY: 0.0,
     delay: 0.0,
     speed: 0.00048,
-    texture: 5,
+    texture_offset: 0.6215,
     period: (4 * Math.PI),
     
     spin_delay: -1.0,
@@ -433,7 +467,7 @@ function InitDemo() {
     translateY: 0.0,
     delay: 0.0,
     speed: 0.0006,
-    texture: 6,
+    texture_offset: 0.747,
     period: (4 * Math.PI),
     
     spin_delay: -1.0,
@@ -456,7 +490,7 @@ function InitDemo() {
     translateY: 0.0,
     delay: 0.0,
     speed: 0.00051,
-    texture: 7,
+    texture_offset: 0.877,
     period: (4 * Math.PI),
     
     spin_delay: -1.0,
@@ -472,7 +506,7 @@ function InitDemo() {
   var waveDeltaTime = 0;
 
   function animate(time) {
-    // console.log("animate")
+    resizeCanvasToDisplaySize(gl.canvas);
     waveDeltaTime = time - waveStartTime;
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     buildImages(waveDeltaTime, wave1Movement);
@@ -499,24 +533,29 @@ function InitDemo() {
     var spinYTranslateLocation = gl.getUniformLocation(spinProgram, "u_y_spin_translate");
     var spinFragTimeLocation = gl.getUniformLocation(spinProgram, "u_spin_time");
     var endTimeLocation = gl.getUniformLocation(spinProgram, "u_old_end_time");
-    
-    var resolutionLocation = gl.getUniformLocation(spinProgram, "u_resolution");
-    var initialXLocation = gl.getUniformLocation(spinProgram, "u_x_coord");
-    var initialYLocation = gl.getUniformLocation(spinProgram, "u_y_coord");
-    var xScaleBaseLocation = gl.getUniformLocation(spinProgram, "u_x_scale_base");
-    var yScaleBaseLocation = gl.getUniformLocation(spinProgram, "u_y_scale_base");
-    var xScaleVarienceLocation = gl.getUniformLocation(spinProgram, "u_x_scale_varience");
-    var yScaleVarienceLocation = gl.getUniformLocation(spinProgram, "u_y_scale_varience");
-    var xSkewVarienceLocation = gl.getUniformLocation(spinProgram, "u_x_skew_varience");
-    var ySkewVarienceLocation = gl.getUniformLocation(spinProgram, "u_y_skew_varience");
-    var xTranslateLocation = gl.getUniformLocation(spinProgram, "u_x_translate");
-    var yTranslateLocation = gl.getUniformLocation(spinProgram, "u_y_translate");
+   
+    widthLocation = gl.getUniformLocation(spinProgram, "u_width");
+    offsetLocation = gl.getUniformLocation(spinProgram, "u_offset");  
+    resolutionLocation = gl.getUniformLocation(spinProgram, "u_resolution");
+    initialXLocation = gl.getUniformLocation(spinProgram, "u_x_coord");
+    initialYLocation = gl.getUniformLocation(spinProgram, "u_y_coord");
+    xScaleBaseLocation = gl.getUniformLocation(spinProgram, "u_x_scale_base");
+    yScaleBaseLocation = gl.getUniformLocation(spinProgram, "u_y_scale_base");
+    xScaleVarienceLocation = gl.getUniformLocation(spinProgram, "u_x_scale_varience");
+    yScaleVarienceLocation = gl.getUniformLocation(spinProgram, "u_y_scale_varience");
+    xSkewVarienceLocation = gl.getUniformLocation(spinProgram, "u_x_skew_varience");
+    ySkewVarienceLocation = gl.getUniformLocation(spinProgram, "u_y_skew_varience");
+    xTranslateLocation = gl.getUniformLocation(spinProgram, "u_x_translate");
+    yTranslateLocation = gl.getUniformLocation(spinProgram, "u_y_translate");
     var spinImageLocation = gl.getUniformLocation(spinProgram, "u_image");
     //TODO do these need to be "var" again? ^
     
     gl.uniform2f(spinResolutionLocation, gl.canvas.width, gl.canvas.height);
-    
+    gl.uniform1i(spinImageLocation, 0);
+    gl.uniform1f(widthLocation, .123);
+
     function drawWaveSpin (time, movement) {
+      gl.uniform1f(offsetLocation, movement.texture_offset);
       // wave uniforms
       gl.uniform1f(xScaleBaseLocation, movement.xScaleBase);
       gl.uniform1f(yScaleBaseLocation, movement.yScaleBase);
@@ -537,7 +576,6 @@ function InitDemo() {
       
       gl.uniform1f(spinTimeLocation, (time * movement.spin_speed) + movement.spin_delay);
       gl.uniform1f(spinFragTimeLocation, (time * movement.spin_speed) + -1.0);
-      gl.uniform1i(spinImageLocation, movement.texture); // Point at correct texture
       gl.drawArrays(primitiveType, offset, count);
     }
 
