@@ -77,12 +77,12 @@
     // End what was done by old shader
   
     
-    float time = max(u_time, 0.0); // delay at first
-    time = min(time, u_degrees);
+    float time = max(u_time, 0.0); // allow delay if passed in - replace 0.0 with variable
+    time = min(time, u_degrees); // count up by time to a certain degree, don't go past that degree
     zeroToOne = rotate(-time) * zeroToOne; // -time to always rotate clockwise
     
     float translateTime = min(u_time, 1.0); // 1.0 = don't go further than amount declared
-    translateTime = max(translateTime, 0.0); // delay at first
+    translateTime = max(translateTime, 0.0); // delay at first - currently 0.0
     zeroToOne -= vec2(u_x_spin_translate * translateTime, u_y_spin_translate * translateTime);
     
     
@@ -118,6 +118,7 @@
   uniform float u_y_translate;
   uniform float u_x_translate;
   
+  varying vec2 v_resolution;
   varying vec2 v_texCoord;
   
   mat2 scale(vec2 _scale) {
@@ -140,7 +141,7 @@
     time = min(time, 7.0 * PI/2.0);
     float y_scale = u_y_scale_base + u_y_scale_varience * (sin(time) + 1.0);
     float x_scale = u_x_scale_base + u_x_scale_varience * (sin(time) + 1.0);
-    zeroToOne = scale(vec2(x_scale, y_scale)) * zeroToOne;
+    // zeroToOne = scale(vec2(x_scale, y_scale)) * zeroToOne;
 
     float x_skew = u_x_skew_varience * (sin(time) + 1.0);
     float y_skew = u_y_skew_varience * (sin(time) + 1.0);
@@ -159,6 +160,7 @@
     // pass the texCoord to the fragment shader
     // The GPU will interpolate this value between points.
     v_texCoord = a_texCoord;
+    v_resolution = u_resolution;
   }
   </script>
   
@@ -172,18 +174,32 @@
 
     // the texCoords passed in from the vertex shader.
     varying vec2 v_texCoord;
-    
+    varying vec2 v_resolution;
+
     void main() {
       vec2 texture_point = v_texCoord;
       texture_point.x *= u_width;
       texture_point.x += u_offset;
-      vec4 color = texture2D(u_image, texture_point);
-      // vec4 color = texture2D(u_image, v_texCoord);
+      // vec4 color = texture2D(u_image, texture_point);
+
+      // Blur
+      vec4 color = (
+       texture2D(u_image, texture_point) +
+       texture2D(u_image, texture_point + vec2(1.0/10000.0, 0.0)) + 
+       texture2D(u_image, texture_point + vec2(-1.0/10000.0, 0.0)) +
+       texture2D(u_image, texture_point + vec2(0.0, 1.0/2048.0)) + 
+       texture2D(u_image, texture_point + vec2(0.0, -1.0/2048.0)) + 
+       texture2D(u_image, texture_point + vec2(-1.0/10000.0, 1.0/2048.0)) + 
+       texture2D(u_image, texture_point + vec2(-1.0/10000.0, -1.0/2048.0))+
+       texture2D(u_image, texture_point + vec2(1.0/10000.0, 1.0/2048.0)) + 
+       texture2D(u_image, texture_point + vec2(1.0/10000.0, -1.0/2048.0)))/ 9.0;
+
       // color.a = smoothstep(0.00, 0.01, color.r + color.g + color.b);
       color.a = min(0.8, color.a); //set variable here for opacity
       // color.a = step(0.01, color.r + color.g + color.b); // remove black and make it transparent
       color.b = v_texCoord.x;
       color.g = v_texCoord.y;
+      
       gl_FragColor = color;
     }
   </script>
@@ -219,33 +235,3 @@
   <script src="app.js"></script>
 </body>
 </html>
-
-<!-- <script id="2d-vertex-shader2" type="x-shader/x-vertex">
-precision mediump float;
-attribute vec2 a_position;
-attribute vec2 a_texCoord;
-
-uniform vec2 u_resolution;
-uniform float u_time;
-
-varying vec2 v_texCoord;
-
-void main() {
-   // convert the rectangle from pixels to 0.0 to 1.0
-   vec2 zeroToOne = a_position / u_resolution;
-
-   // convert from 0->1 to 0->2
-   vec2 zeroToTwo = zeroToOne * 2.0;
-
-   // convert from 0->2 to -1->+1 (clipspace)
-   vec2 clipSpace = zeroToTwo - 1.0 * vec2(cos(u_time),sin(u_time));
-   
-   // vec2 clipSpace = vec2(cos(u_time),sin(u_time));
-
-   gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
-
-   // pass the texCoord to the fragment shader
-   // The GPU will interpolate this value between points.
-   v_texCoord = a_texCoord;
-}
-</script> -->

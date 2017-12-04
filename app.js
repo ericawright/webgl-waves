@@ -140,64 +140,6 @@ function InitDemo() {
       0.0,  1.0,
       1.0,  0.0,
       1.0,  1.0,
-      
-      
-  // select the first image
-  // 0.0,  0.0,
-  // 0.123,  0.0,
-  // 0.0,  1.0,
-  // 0.0,  1.0,
-  // 0.123,  0.0,
-  // 0.123,  1.0,
-  
-  // 0.124,  0.0,
-  // 0.247,  0.0,
-  // 0.124,  1.0,
-  // 0.124,  1.0,
-  // 0.247,  0.0,
-  // 0.247,  1.0,
-  
-  // 0   , 0  ,
-  // 0   , 0.5,
-  // 0.25, 0  ,
-  // 0   , 0.5,
-  // 0.25, 0.5,
-  // 0.25, 0  ,
-  // // select the bottom middle image
-  // 0.25, 0  ,
-  // 0.5 , 0  ,
-  // 0.25, 0.5,
-  // 0.25, 0.5,
-  // 0.5 , 0  ,
-  // 0.5 , 0.5,
-  // // select to bottom right image
-  // 0.5 , 0  ,
-  // 0.5 , 0.5,
-  // 0.75, 0  ,
-  // 0.5 , 0.5,
-  // 0.75, 0.5,
-  // 0.75, 0  ,
-  // // select the top left image
-  // 0   , 0.5,
-  // 0.25, 0.5,
-  // 0   , 1  ,
-  // 0   , 1  ,
-  // 0.25, 0.5,
-  // 0.25, 1  ,
-  // // select the top middle image
-  // 0.25, 0.5,
-  // 0.25, 1  ,
-  // 0.5 , 0.5,
-  // 0.25, 1  ,
-  // 0.5 , 1  ,
-  // 0.5 , 0.5,
-  // // select the top right image
-  // 0.5 , 0.5,
-  // 0.75, 0.5,
-  // 0.5 , 1  ,
-  // 0.5 , 1  ,
-  // 0.75, 0.5,
-  // 0.75, 1  ,
   ]), gl.STATIC_DRAW);
 
   // lookup uniforms
@@ -330,15 +272,15 @@ function InitDemo() {
     initialY: 0.1,
     translateX: 0.0,
     translateY: 0.0,
-    delay: 0.0,
+    delay: 3.2,
     speed: 0.0015,
     texture_offset: 0.0,
     period: 11,
     
-    spin_delay: -2.0,
-    spin_radians: 3.0,
-    spin_translateX: 0.8,
-    spin_translateY: 1.1,
+    spin_delay: -1.0,
+    spin_radians: 4.0,
+    spin_translateX: 0.9,
+    spin_translateY: 1.4,
     spin_speed: 0.002,
   }
   let wave2Movement = {
@@ -352,15 +294,15 @@ function InitDemo() {
     initialY: -0.3,
     translateX: 0.0,
     translateY: 0.0,
-    delay: 0.0,
+    delay: 3.2,
     speed: 0.0016,
     texture_offset: 0.124,
     period: 11,
     
     spin_delay: -1.0,
-    spin_radians: 3.0,
-    spin_translateX: 0.0,
-    spin_translateY: 0.4,
+    spin_radians: 0.0,
+    spin_translateX: 0.1,
+    spin_translateY: -0.8,
     spin_speed: 0.0028,
   }
   let wave3Movement = {
@@ -374,15 +316,15 @@ function InitDemo() {
     initialY: -0.5,
     translateX: 0.0,
     translateY: 0.0,
-    delay: 0.0,
+    delay: 3.2,
     speed: 0.0011,
     texture_offset: 0.2495,
     period: 11,
     
     spin_delay: -1.0,
-    spin_radians: 3.0,
-    spin_translateX: 0.1,
-    spin_translateY: 0.5,
+    spin_radians: 2.1,
+    spin_translateX: 0.25,
+    spin_translateY: 0.25,
     spin_speed: 0.0027,
   }
   let wave4Movement = {
@@ -396,15 +338,15 @@ function InitDemo() {
     initialY: -0.8,
     translateX: 0.0,
     translateY: 0.0,
-    delay: 0.0,
+    delay: 3.2,
     speed: 0.00018,
     texture_offset: 0.3735,
     period: 11,
     
     spin_delay: -1.0,
-    spin_radians: 3.0,
-    spin_translateX: -0.4,
-    spin_translateY: 0.0,
+    spin_radians: 0.5,
+    spin_translateX: 0.4,
+    spin_translateY: -0.3,
     spin_speed: 0.0026,
   }
   
@@ -419,16 +361,16 @@ function InitDemo() {
     initialY: 0.15,
     translateX: 0.0,
     translateY: -0.1,
-    delay: 0.0,
+    delay: 3.2,
     speed: 0.0005,
     texture_offset: 0.4965,
     period: (4 * Math.PI),
     
     spin_delay: -1.0,
-    spin_radians: 4.0,
-    spin_translateX: -0.4,
-    spin_translateY: -0.4,
-    spin_speed: 0.002,
+    spin_radians: 1.4,
+    spin_translateX: 0.8,
+    spin_translateY: -0.3,
+    spin_speed: 0.0025,
   }
   
   let wave6Movement = {
@@ -442,16 +384,16 @@ function InitDemo() {
     initialY: 0.4,
     translateX: 0.0,
     translateY: 0.0,
-    delay: 0.0,
+    delay: 3.2,
     speed: 0.00048,
     texture_offset: 0.6215,
     period: (4 * Math.PI),
     
     spin_delay: -1.0,
-    spin_radians: 3.0,
-    spin_translateX: -0.5,
-    spin_translateY: -0.6,
-    spin_speed: 0.0023,
+    spin_radians: 2.0,
+    spin_translateX: -0.6,
+    spin_translateY: -0.0,
+    spin_speed: 0.0026,
   }
   
   let wave7Movement = {
@@ -465,16 +407,16 @@ function InitDemo() {
     initialY: 0.4,
     translateX: 0.0,
     translateY: 0.0,
-    delay: 0.0,
+    delay: 3.2,
     speed: 0.0006,
     texture_offset: 0.747,
     period: (4 * Math.PI),
     
     spin_delay: -1.0,
     spin_radians: 3.0,
-    spin_translateX: 0.0,
-    spin_translateY: -0.6,
-    spin_speed: 0.003,
+    spin_translateX: -0.4,
+    spin_translateY: -0.2,
+    spin_speed: 0.0025,
   }
   
   let wave8Movement = {
@@ -488,15 +430,15 @@ function InitDemo() {
     initialY: 0.3,
     translateX: 0.0,
     translateY: 0.0,
-    delay: 0.0,
+    delay: 3.2,
     speed: 0.00051,
     texture_offset: 0.877,
     period: (4 * Math.PI),
     
     spin_delay: -1.0,
-    spin_radians: 4.5,
-    spin_translateX: 0.5,
-    spin_translateY: 0.0,
+    spin_radians: 2.0,
+    spin_translateX: -0.4,
+    spin_translateY: -0.1,
     spin_speed: 0.002,
   }
   
@@ -510,13 +452,13 @@ function InitDemo() {
     waveDeltaTime = time - waveStartTime;
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     buildImages(waveDeltaTime, wave1Movement);
-    buildImages(waveDeltaTime, wave2Movement);
-    buildImages(waveDeltaTime, wave3Movement);
-    buildImages(waveDeltaTime, wave4Movement);
-    buildImages(waveDeltaTime, wave5Movement);
-    buildImages(waveDeltaTime, wave6Movement);
-    buildImages(waveDeltaTime, wave7Movement);
-    buildImages(waveDeltaTime, wave8Movement);
+    // buildImages(waveDeltaTime, wave2Movement);
+    // buildImages(waveDeltaTime, wave3Movement);
+    // buildImages(waveDeltaTime, wave4Movement);
+    // buildImages(waveDeltaTime, wave5Movement);
+    // buildImages(waveDeltaTime, wave6Movement);
+    // buildImages(waveDeltaTime, wave7Movement);
+    // buildImages(waveDeltaTime, wave8Movement);
   
      myReq = window.requestAnimationFrame(animate);
   }
