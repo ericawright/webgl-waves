@@ -1,118 +1,12 @@
 "use strict"
 
-var t_starttime = performance.now();
-
-// utility Functions
-
-function resizeCanvasToDisplaySize(canvas, multiplier) {
-  multiplier = multiplier || 1;
-  var width  = canvas.clientWidth  * multiplier | 0;
-  var height = canvas.clientHeight * multiplier | 0;
-  if (canvas.width !== width ||  canvas.height !== height) {
-    canvas.width  = width;
-    canvas.height = height;
-    return true;
-  }
-  return false;
-}
-
-function createProgram(gl, vertexShader, fragmentShader) {
-  // create a program.
-  var program = gl.createProgram();
-
-  // attach the shaders.
-  gl.attachShader(program, vertexShader);
-  gl.attachShader(program, fragmentShader);
-
-  // link the program.
-  gl.linkProgram(program);
-
-  // Check if it linked.
-  var success = gl.getProgramParameter(program, gl.LINK_STATUS);
-  if (!success) {
-      // something went wrong with the link
-      throw ("program failed to link:" + gl.getProgramInfoLog (program));
-  }
-
-  return program;
-};
-
-function compileShader(gl, shaderSource, shaderType) {
-  // Create the shader object
-  var shader = gl.createShader(shaderType);
-
-  // Set the shader source code.
-  gl.shaderSource(shader, shaderSource);
-
-  // Compile the shader
-  gl.compileShader(shader);
-
-  // Check if it compiled
-  var success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
-  if (!success) {
-    // Something went wrong during compilation; get the error
-    throw "could not compile shader:" + gl.getShaderInfoLog(shader);
-  }
-
-  return shader;
-}
-
-function createShaderFromScript(gl, scriptId, opt_shaderType) {
-  // look up the script tag by id.
-  var shaderScript = document.getElementById(scriptId);
-  if (!shaderScript) {
-    throw("*** Error: unknown script element" + scriptId);
-  }
-
-  // extract the contents of the script tag.
-  var shaderSource = shaderScript.text;
-
-  // If we didn't pass in a type, use the 'type' from
-  // the script tag.
-  if (!opt_shaderType) {
-    if (shaderScript.type == "x-shader/x-vertex") {
-      opt_shaderType = gl.VERTEX_SHADER;
-    } else if (shaderScript.type == "x-shader/x-fragment") {
-      opt_shaderType = gl.FRAGMENT_SHADER;
-    } else if (!opt_shaderType) {
-      throw("*** Error: shader type not set");
-    }
-  }
-
-  return compileShader(gl, shaderSource, opt_shaderType);
-};
-
-function createProgramFromScripts(
-    gl, shaderScriptIds) {
-  var vertexShader = createShaderFromScript(gl, shaderScriptIds[0], gl.VERTEX_SHADER);
-  gl.compileShader(vertexShader);
-  if(!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
-    console.error('error compiling vertex shader', gl.getShaderInfoLog(vertexShader));
-    return;
-  }
-
-  var fragmentShader = createShaderFromScript(gl, shaderScriptIds[1], gl.FRAGMENT_SHADER);
-  gl.compileShader(fragmentShader);
-  if(!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
-    console.error('error compiling frag shader', gl.getShaderInfoLog(fragmentShader));
-    return;
-  }
-
-  return createProgram(gl, vertexShader, fragmentShader);
-}
-
+// Entrypoint
 function InitDemo() {
-  // Get A WebGL context
-  console.log('before canvas object : ',  performance.now() - t_starttime);
   var canvas = document.getElementById("canvas");
   var gl = canvas.getContext("webgl");
   if (!gl) {
     return;
   }
-
-  console.log('after canvas and webgl context : ',  performance.now() - t_starttime);
-
-  // setup GLSL program
   var program = createProgramFromScripts(gl, ["2d-vertex-shader", "2d-fragment-shader"]);
   var spinProgram = createProgramFromScripts(gl, ["2d-vertex-shader-spin", "2d-fragment-shader-spin"]);
 
@@ -122,8 +16,6 @@ function InitDemo() {
 
   // Create a buffer to put three 2d clip space points in
   var positionBuffer = gl.createBuffer();
-
-  // Bind it to ARRAY_BUFFER
   gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
   
   // Set a rectangle the same size as the canvas.
@@ -132,7 +24,6 @@ function InitDemo() {
   // provide texture coordinates for the rectangle.
   var texcoordBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
-  // set co-ordinates for texture map. Using atlas mapping.
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
       0.0,  0.0,
       1.0,  0.0,
@@ -157,6 +48,7 @@ function InitDemo() {
   var imageLocation = gl.getUniformLocation(program, "u_image");
   var offsetLocation = gl.getUniformLocation(program, "u_offset");
   var widthLocation = gl.getUniformLocation(program, "u_width");
+  var timeLocation = gl.getUniformLocation(program, "u_time");
 
   resizeCanvasToDisplaySize(gl.canvas);
 
@@ -169,12 +61,6 @@ function InitDemo() {
 
   // Tell it to use our program (pair of shaders)
   gl.useProgram(program);
-  // 
-  // gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-  gl.enable(gl.BLEND);
-  gl.disable(gl.DEPTH_TEST);
-
 
   gl.enableVertexAttribArray(positionLocation);
   gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
@@ -203,49 +89,34 @@ function InitDemo() {
   // set the resolution
   gl.uniform2f(resolutionLocation, gl.canvas.width, gl.canvas.height);
 
-  // Draw the rectangle.
-  var primitiveType = gl.TRIANGLES;
-  var offset = 0;
-  var count = 6;
+  var onImageLoad = function(event) {
+    
+    var texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
 
-  var timeLocation = gl.getUniformLocation(program, "u_time");
-  
-  var initImages = function() {
-    console.log('init time : ', performance.now() - t_starttime);
-    var url = "all-wavesa.png";
+    // Set the parameters so we can render any size image.
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
-    var loadImage = function (url, callback) {
-      var image = new Image();
-      image.src = url;
-      image.onload = callback;
-      return image;
-    };
-    var onImageLoad = function(event) {
-      
-      console.log('before binding texture : ', performance.now() - t_starttime);
-      
-      var texture = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, texture);
+    // Upload the image into the texture.
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, event.target);
 
-      // Set the parameters so we can render any size image.
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    requestAnimationFrame(animate);
+  };
+  var image = new Image();
+  image.src = "all-wavesa.png";
+  image.onload = onImageLoad;
 
-      // Upload the image into the texture.
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, event.target);
-
-      requestAnimationFrame(animate);
-    };
-    loadImage(url, onImageLoad);
-  }
-  initImages();
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+  gl.enable(gl.BLEND);
+  gl.disable(gl.DEPTH_TEST);
 
   gl.uniform1i(imageLocation, 0);
-  gl.uniform1f(widthLocation, .123);
+  gl.uniform1f(widthLocation, .123); // Width of each image
     
-  function buildImages(time, movement) {
+  function drawWaves(time, movement) {
     gl.uniform1f(offsetLocation, movement.texture_offset);
     gl.uniform1f(xScaleBaseLocation, movement.xScaleBase);
     gl.uniform1f(yScaleBaseLocation, movement.yScaleBase);
@@ -258,7 +129,7 @@ function InitDemo() {
     gl.uniform1f(xTranslateLocation, movement.translateX);
     gl.uniform1f(yTranslateLocation, movement.translateY);
     gl.uniform1f(timeLocation, ((time * movement.speed) + movement.delay) % movement.period);
-    gl.drawArrays(primitiveType, offset, count);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
   
   let wave1Movement = {
@@ -451,19 +322,18 @@ function InitDemo() {
     resizeCanvasToDisplaySize(gl.canvas);
     waveDeltaTime = time - waveStartTime;
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    buildImages(waveDeltaTime, wave1Movement);
-    // buildImages(waveDeltaTime, wave2Movement);
-    // buildImages(waveDeltaTime, wave3Movement);
-    // buildImages(waveDeltaTime, wave4Movement);
-    // buildImages(waveDeltaTime, wave5Movement);
-    // buildImages(waveDeltaTime, wave6Movement);
-    // buildImages(waveDeltaTime, wave7Movement);
-    // buildImages(waveDeltaTime, wave8Movement);
+    drawWaves(waveDeltaTime, wave1Movement);
+    drawWaves(waveDeltaTime, wave2Movement);
+    drawWaves(waveDeltaTime, wave3Movement);
+    drawWaves(waveDeltaTime, wave4Movement);
+    drawWaves(waveDeltaTime, wave5Movement);
+    drawWaves(waveDeltaTime, wave6Movement);
+    drawWaves(waveDeltaTime, wave7Movement);
+    drawWaves(waveDeltaTime, wave8Movement);
   
-     myReq = window.requestAnimationFrame(animate);
+    myReq = window.requestAnimationFrame(animate);
   }
   
-
   // Change to rotation/spin shaders on keypress
   function handleKeyUp () {
     gl.useProgram(spinProgram);
@@ -476,39 +346,38 @@ function InitDemo() {
     var spinFragTimeLocation = gl.getUniformLocation(spinProgram, "u_spin_time");
     var endTimeLocation = gl.getUniformLocation(spinProgram, "u_old_end_time");
    
-    widthLocation = gl.getUniformLocation(spinProgram, "u_width");
-    offsetLocation = gl.getUniformLocation(spinProgram, "u_offset");  
-    resolutionLocation = gl.getUniformLocation(spinProgram, "u_resolution");
-    initialXLocation = gl.getUniformLocation(spinProgram, "u_x_coord");
-    initialYLocation = gl.getUniformLocation(spinProgram, "u_y_coord");
-    xScaleBaseLocation = gl.getUniformLocation(spinProgram, "u_x_scale_base");
-    yScaleBaseLocation = gl.getUniformLocation(spinProgram, "u_y_scale_base");
-    xScaleVarienceLocation = gl.getUniformLocation(spinProgram, "u_x_scale_varience");
-    yScaleVarienceLocation = gl.getUniformLocation(spinProgram, "u_y_scale_varience");
-    xSkewVarienceLocation = gl.getUniformLocation(spinProgram, "u_x_skew_varience");
-    ySkewVarienceLocation = gl.getUniformLocation(spinProgram, "u_y_skew_varience");
-    xTranslateLocation = gl.getUniformLocation(spinProgram, "u_x_translate");
-    yTranslateLocation = gl.getUniformLocation(spinProgram, "u_y_translate");
+    var spinWidthLocation = gl.getUniformLocation(spinProgram, "u_width");
+    var spinOffsetLocation = gl.getUniformLocation(spinProgram, "u_offset");
+    var spinResolutionLocation = gl.getUniformLocation(spinProgram, "u_resolution");
+    var spinInitialXLocation = gl.getUniformLocation(spinProgram, "u_x_coord");
+    var spinInitialYLocation = gl.getUniformLocation(spinProgram, "u_y_coord");
+    var spinXScaleBaseLocation = gl.getUniformLocation(spinProgram, "u_x_scale_base");
+    var spinYScaleBaseLocation = gl.getUniformLocation(spinProgram, "u_y_scale_base");
+    var spinXScaleVarienceLocation = gl.getUniformLocation(spinProgram, "u_x_scale_varience");
+    var spinYScaleVarienceLocation = gl.getUniformLocation(spinProgram, "u_y_scale_varience");
+    var spinXSkewVarienceLocation = gl.getUniformLocation(spinProgram, "u_x_skew_varience");
+    var spinYSkewVarienceLocation = gl.getUniformLocation(spinProgram, "u_y_skew_varience");
+    var spinOldXTranslateLocation = gl.getUniformLocation(spinProgram, "u_x_translate");
+    var spinOldYTranslateLocation = gl.getUniformLocation(spinProgram, "u_y_translate");
     var spinImageLocation = gl.getUniformLocation(spinProgram, "u_image");
-    //TODO do these need to be "var" again? ^
     
     gl.uniform2f(spinResolutionLocation, gl.canvas.width, gl.canvas.height);
     gl.uniform1i(spinImageLocation, 0);
-    gl.uniform1f(widthLocation, .123);
+    gl.uniform1f(spinWidthLocation, .123);
 
     function drawWaveSpin (time, movement) {
-      gl.uniform1f(offsetLocation, movement.texture_offset);
-      // wave uniforms
-      gl.uniform1f(xScaleBaseLocation, movement.xScaleBase);
-      gl.uniform1f(yScaleBaseLocation, movement.yScaleBase);
-      gl.uniform1f(xScaleVarienceLocation, movement.xScaleVarience);
-      gl.uniform1f(yScaleVarienceLocation, movement.yScaleVarience);
-      gl.uniform1f(xSkewVarienceLocation, movement.xSkewVarience);
-      gl.uniform1f(ySkewVarienceLocation, movement.ySkewVarience);
-      gl.uniform1f(initialXLocation, movement.initialX);
-      gl.uniform1f(initialYLocation, movement.initialY);
-      gl.uniform1f(xTranslateLocation, movement.translateX);
-      gl.uniform1f(yTranslateLocation, movement.translateY);
+      // old wave uniforms
+      gl.uniform1f(spinOffsetLocation, movement.texture_offset);
+      gl.uniform1f(spinXScaleBaseLocation, movement.xScaleBase);
+      gl.uniform1f(spinYScaleBaseLocation, movement.yScaleBase);
+      gl.uniform1f(spinXScaleVarienceLocation, movement.xScaleVarience);
+      gl.uniform1f(spinYScaleVarienceLocation, movement.yScaleVarience);
+      gl.uniform1f(spinXSkewVarienceLocation, movement.xSkewVarience);
+      gl.uniform1f(spinYSkewVarienceLocation, movement.ySkewVarience);
+      gl.uniform1f(spinInitialXLocation, movement.initialX);
+      gl.uniform1f(spinInitialYLocation, movement.initialY);
+      gl.uniform1f(spinOldXTranslateLocation, movement.translateX);
+      gl.uniform1f(spinOldYTranslateLocation, movement.translateY);
       
       // spin uniforms
       gl.uniform1f(spinXTranslateLocation, movement.spin_translateX);
@@ -518,7 +387,7 @@ function InitDemo() {
       
       gl.uniform1f(spinTimeLocation, (time * movement.spin_speed) + movement.spin_delay);
       gl.uniform1f(spinFragTimeLocation, (time * movement.spin_speed) + -1.0);
-      gl.drawArrays(primitiveType, offset, count);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
 
     var deltaTime = 0;
@@ -541,6 +410,106 @@ function InitDemo() {
     spinOutAnimation(startTime);
   }
   document.onkeyup = handleKeyUp;
+}
+
+
+
+// Utility Functions
+function resizeCanvasToDisplaySize(canvas, multiplier) {
+  multiplier = multiplier || 1;
+  var width  = canvas.clientWidth  * multiplier | 0;
+  var height = canvas.clientHeight * multiplier | 0;
+  if (canvas.width !== width ||  canvas.height !== height) {
+    canvas.width  = width;
+    canvas.height = height;
+    return true;
+  }
+  return false;
+}
+
+function createProgram(gl, vertexShader, fragmentShader) {
+  // create a program.
+  var program = gl.createProgram();
+
+  // attach the shaders.
+  gl.attachShader(program, vertexShader);
+  gl.attachShader(program, fragmentShader);
+
+  // link the program.
+  gl.linkProgram(program);
+
+  // Check if it linked.
+  var success = gl.getProgramParameter(program, gl.LINK_STATUS);
+  if (!success) {
+      // something went wrong with the link
+      throw ("program failed to link:" + gl.getProgramInfoLog (program));
+  }
+
+  return program;
+};
+
+function compileShader(gl, shaderSource, shaderType) {
+  // Create the shader object
+  var shader = gl.createShader(shaderType);
+
+  // Set the shader source code.
+  gl.shaderSource(shader, shaderSource);
+
+  // Compile the shader
+  gl.compileShader(shader);
+
+  // Check if it compiled
+  var success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+  if (!success) {
+    // Something went wrong during compilation; get the error
+    throw "could not compile shader:" + gl.getShaderInfoLog(shader);
+  }
+
+  return shader;
+}
+
+function createShaderFromScript(gl, scriptId, opt_shaderType) {
+  // look up the script tag by id.
+  var shaderScript = document.getElementById(scriptId);
+  if (!shaderScript) {
+    throw("*** Error: unknown script element" + scriptId);
+  }
+
+  // extract the contents of the script tag.
+  var shaderSource = shaderScript.text;
+
+  // If we didn't pass in a type, use the 'type' from
+  // the script tag.
+  if (!opt_shaderType) {
+    if (shaderScript.type == "x-shader/x-vertex") {
+      opt_shaderType = gl.VERTEX_SHADER;
+    } else if (shaderScript.type == "x-shader/x-fragment") {
+      opt_shaderType = gl.FRAGMENT_SHADER;
+    } else if (!opt_shaderType) {
+      throw("*** Error: shader type not set");
+    }
+  }
+
+  return compileShader(gl, shaderSource, opt_shaderType);
+};
+
+function createProgramFromScripts(
+    gl, shaderScriptIds) {
+  var vertexShader = createShaderFromScript(gl, shaderScriptIds[0], gl.VERTEX_SHADER);
+  gl.compileShader(vertexShader);
+  if(!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+    console.error('error compiling vertex shader', gl.getShaderInfoLog(vertexShader));
+    return;
+  }
+
+  var fragmentShader = createShaderFromScript(gl, shaderScriptIds[1], gl.FRAGMENT_SHADER);
+  gl.compileShader(fragmentShader);
+  if(!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+    console.error('error compiling frag shader', gl.getShaderInfoLog(fragmentShader));
+    return;
+  }
+
+  return createProgram(gl, vertexShader, fragmentShader);
 }
 
 function setRectangle(gl, x, y, width, height) {
