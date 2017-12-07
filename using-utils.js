@@ -11,18 +11,14 @@ function initDemo() {
   }
 
    webglUtils.resizeCanvasToDisplaySize(gl.canvas);
-   console.log(canvas.width, canvas.height)
 
   var program = webglUtils.createProgramFromScripts(gl, ["2d-vertex-shader", "2d-fragment-shader"]);
-  var blurProgram =  webglUtils.createProgramFromScripts(gl, ["2d-vertex-shader-blur", "2d-fragment-shader-blur"]);
+  var blurProgram =  webglUtils.createProgramFromScripts(gl, ["2d-vertex-shader", "2d-fragment-shader-blur"]);
   var spinProgram =  webglUtils.createProgramFromScripts(gl, ["2d-vertex-shader-spin", "2d-fragment-shader-spin"]);
 
   // look up where the vertex data needs to go.
   var positionLocation = gl.getAttribLocation(program, "a_position");
   var texcoordLocation = gl.getAttribLocation(program, "a_texCoord");
-  
-  var blurPositionLocation = gl.getAttribLocation(blurProgram, "a_position");
-  var blurTexCoordLocation = gl.getAttribLocation(blurProgram, "a_texCoord");
 
   // Create a buffer to put three 2d clip space points in
   var positionBuffer = gl.createBuffer();
@@ -44,35 +40,29 @@ function initDemo() {
   ]), gl.STATIC_DRAW);
 
   // lookup uniforms
+  var uniformSettersDefault = webglUtils.createUniformSetters(gl, program);
+  var uniformSettersBlur = webglUtils.createUniformSetters(gl, blurProgram);
+  
   var resolutionLocation = gl.getUniformLocation(program, "u_resolution");
-  var initialXLocation = gl.getUniformLocation(program, "u_x_coord");
-  var initialYLocation = gl.getUniformLocation(program, "u_y_coord");
-  var xScaleBaseLocation = gl.getUniformLocation(program, "u_x_scale_base");
-  var yScaleBaseLocation = gl.getUniformLocation(program, "u_y_scale_base");
-  var xScaleVarienceLocation = gl.getUniformLocation(program, "u_x_scale_varience");
-  var yScaleVarienceLocation = gl.getUniformLocation(program, "u_y_scale_varience");
-  var xSkewVarienceLocation = gl.getUniformLocation(program, "u_x_skew_varience");
-  var ySkewVarienceLocation = gl.getUniformLocation(program, "u_y_skew_varience");
-  var xTranslateLocation = gl.getUniformLocation(program, "u_x_translate");
-  var yTranslateLocation = gl.getUniformLocation(program, "u_y_translate");
   var imageLocation = gl.getUniformLocation(program, "u_image");
   var offsetLocation = gl.getUniformLocation(program, "u_offset");
   var widthLocation = gl.getUniformLocation(program, "u_width");
-  var timeLocation = gl.getUniformLocation(program, "u_time");
+  // var timeLocation = gl.getUniformLocation(program, "u_time");
+  
   // Blur Uniforms
-  var textureSizeLocation = gl.getUniformLocation(blurProgram, "u_textureSize");
-  var kernelLocation = gl.getUniformLocation(blurProgram, "u_kernel[0]");
-  var kernelWeightLocation = gl.getUniformLocation(blurProgram, "u_kernelWeight");
-  var directionLocation =  gl.getUniformLocation(blurProgram, "dir");
-  var blurResolutionLocation = gl.getUniformLocation(blurProgram, "u_resolution");
   var blurImageLocation = gl.getUniformLocation(blurProgram, "u_image");
-  // var timeLocation = gl.getUniformLocation(blurProgram, "u_time");
+  var kernelLocation = gl.getUniformLocation(blurProgram, "u_kernel[0]");
+  var directionLocation =  gl.getUniformLocation(blurProgram, "dir");
 
   // Tell WebGL how to convert from clip space to pixels
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
+  // Clear the canvas
+  gl.clearColor(0, 0, 0, 0);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+
   // Tell it to use our program (pair of shaders)
-  gl.useProgram(program);
+  gl.useProgram(blurProgram);
 
   gl.enableVertexAttribArray(positionLocation);
   gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
@@ -131,50 +121,77 @@ function initDemo() {
         0.111275,
         0.110967,
         0.110536
-      ];
+      ]
     
-    var textures = [];
-    var framebuffers = [];
-    for (var ii = 0; ii < 2; ++ii) {
-      var texture = createAndSetupTexture(gl);
-      textures.push(texture);
+    var frameBufferTexture = createAndSetupTexture();
+    // make the texture the same size as the image
+    gl.texImage2D(
+        gl.TEXTURE_2D, 0, gl.RGBA, canvas.width, canvas.height, 0,
+        gl.RGBA, gl.UNSIGNED_BYTE, null);
+    // Create a framebuffer
+    var frameBuffer = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
 
-      // make the texture the same size as the image
-      gl.texImage2D(
-          gl.TEXTURE_2D, 0, gl.RGBA, canvas.width, canvas.height, 0,
-          gl.RGBA, gl.UNSIGNED_BYTE, null);
+    // Attach a texture to it.
+    gl.framebufferTexture2D(
+      gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, frameBufferTexture, 0);
 
-      // Create a framebuffer
-      var fbo = gl.createFramebuffer();
-      framebuffers.push(fbo);
-      gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-
-      // Attach a texture to it.
-      gl.framebufferTexture2D(
-          gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
-    }
-    
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
     gl.enable(gl.BLEND);
     gl.disable(gl.DEPTH_TEST);
 
     gl.uniform1i(imageLocation, 0);
     gl.uniform1f(widthLocation, .123); // Width of each image
+    
+    let blurWaves = function(time) {
+      // gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.bindTexture(gl.TEXTURE_2D, originalImageTexture);
       
-    function drawWaves(time, movement) {
-      gl.uniform1f(offsetLocation, movement.texture_offset);
-      gl.uniform1f(xScaleBaseLocation, movement.xScaleBase);
-      gl.uniform1f(yScaleBaseLocation, movement.yScaleBase);
-      gl.uniform1f(xScaleVarienceLocation, movement.xScaleVarience);
-      gl.uniform1f(yScaleVarienceLocation, movement.yScaleVarience);
-      gl.uniform1f(xSkewVarienceLocation, movement.xSkewVarience);
-      gl.uniform1f(ySkewVarienceLocation, movement.ySkewVarience);
-      gl.uniform1f(initialXLocation, movement.initialX);
-      gl.uniform1f(initialYLocation, movement.initialY);
-      gl.uniform1f(xTranslateLocation, movement.translateX);
-      gl.uniform1f(yTranslateLocation, movement.translateY);
-      gl.uniform1f(timeLocation, ((time * movement.speed) + movement.delay) % movement.period);
+      gl.uniform2f(directionLocation, 0.0, 1.0);
+      gl.uniform2f(textureSizeLocation, image.width, image.height);
+      gl.uniform1fv(kernelLocation, gb2pass);
+      gl.uniform1i(blurImageLocation, 0);
+      
+      let uniforms = {
+        u_offset: 0.0,
+        u_x_scale_base: 1.0,
+        u_y_scale_base: 1.0,
+        u_x_scale_varience: 0.0,
+        u_y_scale_varience: 0.0,
+        u_x_skew_varience: 0.0,
+        u_y_skew_varience: 0.0,
+        u_x_coord: 0.0,
+        u_y_coord: 0.0,
+        u_x_translate: 0.0,
+        u_y_translate: 0.0,
+        u_time: time,
+        u_kernelWeight: 1.0,
+      }
+      webglUtils.setUniforms(uniformSettersBlur, uniforms);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
+      console.log("drawn to framebuffer")
+    } 
+     
+    let drawWaves = function (time, movement) {
+      let uniforms = {
+         u_offset:        movement.texture_offset,
+         u_x_scale_base:  movement.xScaleBase,
+         u_y_scale_base:  movement.yScaleBase,
+         u_x_scale_varience:  movement.xScaleVarience,
+         u_y_scale_varience:  movement.yScaleVarience,
+         u_x_skew_varience: movement.xSkewVarience,
+         u_y_skew_varience: movement.ySkewVarience,
+         u_x_coord: movement.initialX,
+         u_y_coord: movement.initialY,
+         u_x_translate: movement.translateX,
+         u_y_translate: movement.translateY,
+         u_time: ((time * movement.speed) + movement.delay) % movement.period
+      }
+      webglUtils.setUniforms(uniformSettersDefault, uniforms);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+      console.log("drawn to screen")
     }
     
     let wave1Movement = {
@@ -358,79 +375,31 @@ function initDemo() {
       spin_speed: 0.002,
     }
     
-    var myReq;
-    var oldTime = 0;
-    var waveStartTime = performance.now();
-    var waveDeltaTime = 0;
+    let myReq;
+    let oldTime = 0;
+    let waveStartTime = performance.now();
+    let waveDeltaTime = 0;
+    console.log(image.width, image.height);
     
-    function animate(time) {
-      console.log("animate")
+    gl.useProgram(blurProgram);
+    var textureSizeLocation = gl.getUniformLocation(blurProgram, "u_textureSize");
+    
+    let animate = function (time) {
       waveDeltaTime = time - waveStartTime;
+      console.log("animate");
       
-      gl.useProgram(blurProgram);
-      
-      // Seems to have no effect
-      // gl.enableVertexAttribArray(blurPositionLocation);
-      // gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-      // 
-      // // Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
-      // var size = 2;          // 2 components per iteration
-      // var type = gl.FLOAT;   // the data is 32bit floats
-      // var normalize = false; // don't normalize the data
-      // var stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
-      // var offset = 0;        // start at the beginning of the buffer
-      // gl.vertexAttribPointer(
-      //     blurPositionLocation, size, type, normalize, stride, offset);
-      // 
-      // gl.enableVertexAttribArray(blurTexCoordLocation);
-      // gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
-      // 
-      // 
-      // var size = 2;          // 2 components per iteration
-      // var type = gl.FLOAT;   // the data is 32bit floats
-      // var normalize = false; // don't normalize the data
-      // var stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
-      // var offset = 0;        // start at the beginning of the buffer
-      // gl.vertexAttribPointer(
-      //     blurTexCoordLocation, size, type, normalize, stride, offset);
-
-
-      gl.uniform2f(textureSizeLocation, image.width, image.height);
-      gl.uniform1i(blurImageLocation, 0);
-      gl.uniform1fv(kernelLocation, gb2pass);
-      gl.uniform1f(kernelWeightLocation, 1.0);
-      gl.uniform2f(directionLocation, 1.0, 0.0);
-      
-
-      // Use first frame buffer
-      gl.bindTexture(gl.TEXTURE_2D, originalImageTexture);
-      gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[0]);
-      // gl.uniform2f(textureSizeLocation, canvas.width, canvas.height);
-      gl.uniform2f(blurResolutionLocation, image.width, image.height);
-      gl.drawArrays(gl.TRIANGLES, 0, 6);
-
-      // Use second framebuffer 
-      gl.bindTexture(gl.TEXTURE_2D, textures[0]);
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      // gl.uniform2f(textureSizeLocation, canvas.width, canvas.height);
-      gl.uniform2f(blurResolutionLocation, canvas.width, canvas.height);
-      gl.uniform2f(directionLocation, 0.0, 1.0);
-      gl.drawArrays(gl.TRIANGLES, 0, 6);
-
-
-
-      
-      // Draw for real
+      webglUtils.resizeCanvasToDisplaySize(gl.canvas);
+      gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+      blurWaves(waveDeltaTime);
+  
       // gl.useProgram(program);
-      // gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
       // webglUtils.resizeCanvasToDisplaySize(gl.canvas);
-      // gl.bindTexture(gl.TEXTURE_2D, textures[0]);    
-      // gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      // // gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
-      // // gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      // gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
       // 
-      // gl.drawArrays(gl.TRIANGLES, 0, 6);
-      
+      // gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      // gl.bindTexture(gl.TEXTURE_2D, frameBufferTexture);  
+      // // gl.uniform2f(directionLocation, 1.0, 0.0);
+      // // gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       // drawWaves(waveDeltaTime, wave1Movement);
       // drawWaves(waveDeltaTime, wave2Movement);
       // drawWaves(waveDeltaTime, wave3Movement);
