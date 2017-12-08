@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body onload="initDemo();">
-  <canvas id="canvas">
+  <canvas id="canvas" width="10000" height="2048">
     HTML5 is not supported.
   </canvas>
   
@@ -50,20 +50,21 @@
       float hstep = dir.x;
       float vstep = dir.y;
       vec2 onePixel = vec2(1.0, 1.0) / u_textureSize;
-      vec4 color = texture2D(u_image, v_texCoord);
+      
       // Blur
-      // vec4 color =   
-      //    texture2D(u_image, v_texCoord + onePixel * vec2(-4.0*hstep, -4.0*vstep)) * u_kernel[0] +
-      //    texture2D(u_image, v_texCoord + onePixel * vec2(-3.0*hstep, -3.0*vstep)) * u_kernel[1] +
-      //    texture2D(u_image, v_texCoord + onePixel * vec2(-2.0*hstep, -2.0*vstep)) * u_kernel[2] +
-      //    texture2D(u_image, v_texCoord + onePixel * vec2(-1.0*hstep, -1.0*vstep)) * u_kernel[3] +
-      //    texture2D(u_image, v_texCoord + onePixel * vec2( 0.0,  0.0)) * u_kernel[4] +
-      //    texture2D(u_image, v_texCoord + onePixel * vec2( 1.0*hstep,  1.0*vstep)) * u_kernel[5] +
-      //    texture2D(u_image, v_texCoord + onePixel * vec2( 2.0*hstep,  2.0*vstep)) * u_kernel[6] +
-      //    texture2D(u_image, v_texCoord + onePixel * vec2( 3.0*hstep,  3.0*vstep)) * u_kernel[7] + 
-      //    texture2D(u_image, v_texCoord + onePixel * vec2( 4.0*hstep,  4.0*vstep)) * u_kernel[8];
-      // 
-      // color = color/u_kernelWeight;
+      vec4 color =   
+         texture2D(u_image, v_texCoord + onePixel * vec2(-4.0*hstep, -4.0*vstep)) * u_kernel[0] +
+         texture2D(u_image, v_texCoord + onePixel * vec2(-3.0*hstep, -3.0*vstep)) * u_kernel[1] +
+         texture2D(u_image, v_texCoord + onePixel * vec2(-2.0*hstep, -2.0*vstep)) * u_kernel[2] +
+         texture2D(u_image, v_texCoord + onePixel * vec2(-1.0*hstep, -1.0*vstep)) * u_kernel[3] +
+         texture2D(u_image, v_texCoord + onePixel * vec2( 0.0,  0.0)) * u_kernel[4] +
+         texture2D(u_image, v_texCoord + onePixel * vec2( 1.0*hstep,  1.0*vstep)) * u_kernel[5] +
+         texture2D(u_image, v_texCoord + onePixel * vec2( 2.0*hstep,  2.0*vstep)) * u_kernel[6] +
+         texture2D(u_image, v_texCoord + onePixel * vec2( 3.0*hstep,  3.0*vstep)) * u_kernel[7] + 
+         texture2D(u_image, v_texCoord + onePixel * vec2( 4.0*hstep,  4.0*vstep)) * u_kernel[8];
+      
+      color = color/u_kernelWeight;
+      color = vec4(texture2D(u_image, v_texCoord).rgb, color.a);
       // color.a = step(0.01, color.r + color.g + color.b);
       
       gl_FragColor = color;
@@ -174,6 +175,7 @@
   uniform float u_x_skew_varience;
   uniform float u_y_translate;
   uniform float u_x_translate;
+  uniform float u_offset;
   
   varying vec2 v_texCoord;
   
@@ -197,7 +199,7 @@
     time = min(time, 7.0 * PI/2.0);
     float y_scale = u_y_scale_base + u_y_scale_varience * (sin(time) + 1.0);
     float x_scale = u_x_scale_base + u_x_scale_varience * (sin(time) + 1.0);
-    // zeroToOne = scale(vec2(x_scale, y_scale)) * zeroToOne;
+    zeroToOne = scale(vec2(x_scale, y_scale)) * zeroToOne;
     
     float x_skew = u_x_skew_varience * (sin(time) + 1.0);
     float y_skew = u_y_skew_varience * (sin(time) + 1.0);
@@ -212,7 +214,7 @@
     vec2 zeroToTwo = zeroToOne * 2.0;
     // convert from 0->2 to -1->+1 (clipspace)
     vec2 clipSpace = zeroToTwo - 1.0;
-    gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
+    gl_Position = vec4(clipSpace * vec2(1, -1), 1.0 - u_offset, 1);
     // pass the texCoord to the fragment shader
     // The GPU will interpolate this value between points.
     v_texCoord = a_texCoord;
@@ -242,6 +244,8 @@
       // // color.a = step(0.01, color.r + color.g + color.b); // remove black and make it transparent
       color.b = v_texCoord.x;
       color.g = v_texCoord.y;
+      color.r = 0.0;
+      color.rgb = color.rgb * color.a;
       
       gl_FragColor = color;
     }
