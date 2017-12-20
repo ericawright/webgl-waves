@@ -9,13 +9,9 @@ function initDemo() {
   if (!gl) {
     return;
   }
-
-   // webglUtils.resizeCanvasToDisplaySize(gl.canvas);
-   console.log(canvas.width, canvas.height)
-
-  var program = webglUtils.createProgramFromScripts(gl, ["2d-vertex-shader", "2d-fragment-shader"]);
-  var blurProgram =  webglUtils.createProgramFromScripts(gl, ["2d-vertex-shader-blur", "2d-fragment-shader-blur"]);
-  var spinProgram =  webglUtils.createProgramFromScripts(gl, ["2d-vertex-shader-spin", "2d-fragment-shader-spin"]);
+  var program = createProgramFromScripts(gl, ["2d-vertex-shader", "2d-fragment-shader"]);
+  var spinProgram = createProgramFromScripts(gl, ["2d-vertex-shader-spin", "2d-fragment-shader-spin"]);
+  var blurProgram = createProgramFromScripts(gl, ["2d-vertex-shader-blur", "2d-fragment-shader-blur"]);
 
   // look up where the vertex data needs to go.
   var positionLocation = gl.getAttribLocation(program, "a_position");
@@ -60,11 +56,10 @@ function initDemo() {
   var offsetLocation = gl.getUniformLocation(program, "u_offset");
   var widthLocation = gl.getUniformLocation(program, "u_width");
   var timeLocation = gl.getUniformLocation(program, "u_time");
-  // Blur Uniforms
+  // Blur uniforms
   var textureSizeLocation = gl.getUniformLocation(blurProgram, "u_textureSize");
   var kernelLocation = gl.getUniformLocation(blurProgram, "u_kernel[0]");
-  var kernelWeightLocation = gl.getUniformLocation(blurProgram, "u_kernelWeight");
-  var directionLocation =  gl.getUniformLocation(blurProgram, "dir");
+  var directionLocation = gl.getUniformLocation(blurProgram, "dir");
   var blurResolutionLocation = gl.getUniformLocation(blurProgram, "u_resolution");
   var blurImageLocation = gl.getUniformLocation(blurProgram, "u_image");
 
@@ -97,67 +92,68 @@ function initDemo() {
       texcoordLocation, size, type, normalize, stride, offset);
 
   // set the resolution
-  gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
-  
-  var createAndSetupTexture = function () {
-    var texture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    return texture;
-  }
-  
+  gl.uniform2f(resolutionLocation, gl.canvas.width, gl.canvas.height);
 
   var image = new Image();
-  image.src = "./all-wavesa.png";
-  image.width = 10000;
-  image.height = 2048;
-  image.onload = function () {
-    var originalImageTexture = createAndSetupTexture();
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-    
-    var framebuffers = [];
-    var gb2pass = [
-        0.110536,
-        0.110967,
-        0.111275,
-        0.111461,
-        0.111523,
-        0.111461,
-        0.111275,
-        0.110967,
-        0.110536
-      ];
-    
-    var textures = [];
-    var framebuffers = [];
-    for (var ii = 0; ii < 2; ++ii) {
-      var texture = createAndSetupTexture(gl);
-      textures.push(texture);
-
-      // make the texture the same size as the image
-      gl.texImage2D(
-          gl.TEXTURE_2D, 0, gl.RGBA, canvas.width, canvas.height, 0,
-          gl.RGBA, gl.UNSIGNED_BYTE, null);
-
-      // Create a framebuffer
-      var fbo = gl.createFramebuffer();
-      framebuffers.push(fbo);
-      gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-
-      // Attach a texture to it.
-      gl.framebufferTexture2D(
-          gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+  image.src = "all-wavesa.png";
+  image.onload = (event) => {
+    var createAndSetupTexture = function () {
+      var texture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      return texture;
     }
     
-    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
+    var originalImageTexture = createAndSetupTexture();
+
+    // Upload the image into the texture.
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, event.target);
+ 
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
     gl.enable(gl.BLEND);
     gl.disable(gl.DEPTH_TEST);
 
     gl.uniform1i(imageLocation, 0);
     gl.uniform1f(widthLocation, .123); // Width of each image
+
+    var framebuffers = [];
+     var gb2pass = [
+         0.110536,
+         0.110967,
+         0.111275,
+         0.111461,
+         0.111523,
+         0.111461,
+         0.111275,
+         0.110967,
+         0.110536
+       ];
+     
+     var textures = [];
+     var framebuffers = [];
+     for (var ii = 0; ii < 2; ++ii) {
+       var texture = createAndSetupTexture(gl);
+       textures.push(texture);
+    
+       // make the texture the same size as the image
+       gl.texImage2D(
+           gl.TEXTURE_2D, 0, gl.RGBA, canvas.width, canvas.height, 0,
+           gl.RGBA, gl.UNSIGNED_BYTE, null);
+    
+       // Create a framebuffer
+       var fbo = gl.createFramebuffer();
+       framebuffers.push(fbo);
+       gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    
+       // Attach a texture to it.
+       gl.framebufferTexture2D(
+           gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+    }
+    let nextTexture;
+    nextTexture = nextTexture || originalImageTexture; 
       
     function drawWaves(time, movement) {
       gl.uniform1f(offsetLocation, movement.texture_offset);
@@ -360,134 +356,145 @@ function initDemo() {
     var oldTime = 0;
     var waveStartTime = performance.now();
     var waveDeltaTime = 0;
-    
-    let nextTexture;
-    
-    gl.useProgram(blurProgram);
 
-    gl.uniform2f(textureSizeLocation, image.width, image.height);
-    gl.uniform1i(blurImageLocation, 0);
-    gl.uniform1fv(kernelLocation, gb2pass);
-    gl.uniform1f(kernelWeightLocation, 1.0);
-    nextTexture = nextTexture || originalImageTexture; 
-    for (let v = 0; v < 0; v++) {
+    function clipAndPosition(time) {
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      // resizeCanvasToDisplaySize(gl.canvas); // can't resize?
+      waveDeltaTime = time - waveStartTime;
+      drawWaves(waveDeltaTime, wave1Movement);
+      // drawWaves(waveDeltaTime, wave2Movement);
+      // drawWaves(waveDeltaTime, wave3Movement);
+      // drawWaves(waveDeltaTime, wave4Movement);
+      // drawWaves(waveDeltaTime, wave5Movement);
+      // drawWaves(waveDeltaTime, wave6Movement);
+      // drawWaves(waveDeltaTime, wave7Movement);
+      // drawWaves(waveDeltaTime, wave8Movement);
+    
+    }
+    function animate(time) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[0]);
+      gl.useProgram(program); // Use clip and move program
       // Use first frame buffer
       gl.bindTexture(gl.TEXTURE_2D, nextTexture);
-      gl.uniform2f(directionLocation, 1.0, 0.0);
-      gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[0]);
-      gl.uniform2f(blurResolutionLocation, canvas.width, canvas.height);
-      gl.drawArrays(gl.TRIANGLES, 0, 6);
+      clipAndPosition(time); // clip and move
       nextTexture = textures[0];
       
-      // Use second framebuffer 
-      gl.bindTexture(gl.TEXTURE_2D, nextTexture);
+      //Use second framebuffer 
+      gl.useProgram(blurProgram); // Use blur program
+      gl.uniform2f(textureSizeLocation, image.width, image.height);
+      gl.uniform1fv(kernelLocation, gb2pass);
+      gl.uniform2f(blurResolutionLocation, gl.canvas.width, gl.canvas.height);
+      gl.uniform1i(blurImageLocation, 0);
+      gl.uniform2f(directionLocation, 0.0, 1.0); // Blur vertical
+      
       gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[1]);
-      gl.uniform2f(blurResolutionLocation, canvas.width, canvas.height);
-      gl.uniform2f(directionLocation, 0.0, 1.0);
-      gl.drawArrays(gl.TRIANGLES, 0, 6);
+      gl.bindTexture(gl.TEXTURE_2D, nextTexture);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.drawArrays(gl.TRIANGLES, 0, 6); //just draw and blur
       nextTexture = textures[1];
-    }
-
-
-    
-    // Draw for real
-    gl.useProgram(program);
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-    // gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
-    gl.bindTexture(gl.TEXTURE_2D, nextTexture);    
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    
-    function animate(time) {
-        waveDeltaTime = time - waveStartTime;
-      drawWaves(waveDeltaTime, wave1Movement);
-      drawWaves(waveDeltaTime, wave2Movement);
-      drawWaves(waveDeltaTime, wave3Movement);
-      drawWaves(waveDeltaTime, wave4Movement);
-      drawWaves(waveDeltaTime, wave5Movement);
-      drawWaves(waveDeltaTime, wave6Movement);
-      drawWaves(waveDeltaTime, wave7Movement);
-      drawWaves(waveDeltaTime, wave8Movement);
-    
+      
+      // Draw to canvas
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.bindTexture(gl.TEXTURE_2D, nextTexture);
+      gl.uniform2f(directionLocation, 1.0, 0.0); // Blue horizontal
+      gl.drawArrays(gl.TRIANGLES, 0, 6); //just draw and blur
       myReq = window.requestAnimationFrame(animate);
+      nextTexture = originalImageTexture;
     }
     requestAnimationFrame(animate);
     
+    
     // Change to rotation/spin shaders on keypress
-    // function handleKeyUp () {
-    //   gl.useProgram(spinProgram);
-    // 
-    //   var spinResolutionLocation = gl.getUniformLocation(spinProgram, "u_resolution");
-    //   var spinTimeLocation = gl.getUniformLocation(spinProgram, "u_time");
-    //   var spinDegreesLocation = gl.getUniformLocation(spinProgram, "u_degrees");
-    //   var spinXTranslateLocation = gl.getUniformLocation(spinProgram, "u_x_spin_translate");
-    //   var spinYTranslateLocation = gl.getUniformLocation(spinProgram, "u_y_spin_translate");
-    //   var spinFragTimeLocation = gl.getUniformLocation(spinProgram, "u_spin_time");
-    //   var endTimeLocation = gl.getUniformLocation(spinProgram, "u_old_end_time");
-    // 
-    //   var spinWidthLocation = gl.getUniformLocation(spinProgram, "u_width");
-    //   var spinOffsetLocation = gl.getUniformLocation(spinProgram, "u_offset");
-    //   var spinResolutionLocation = gl.getUniformLocation(spinProgram, "u_resolution");
-    //   var spinInitialXLocation = gl.getUniformLocation(spinProgram, "u_x_coord");
-    //   var spinInitialYLocation = gl.getUniformLocation(spinProgram, "u_y_coord");
-    //   var spinXScaleBaseLocation = gl.getUniformLocation(spinProgram, "u_x_scale_base");
-    //   var spinYScaleBaseLocation = gl.getUniformLocation(spinProgram, "u_y_scale_base");
-    //   var spinXScaleVarienceLocation = gl.getUniformLocation(spinProgram, "u_x_scale_varience");
-    //   var spinYScaleVarienceLocation = gl.getUniformLocation(spinProgram, "u_y_scale_varience");
-    //   var spinXSkewVarienceLocation = gl.getUniformLocation(spinProgram, "u_x_skew_varience");
-    //   var spinYSkewVarienceLocation = gl.getUniformLocation(spinProgram, "u_y_skew_varience");
-    //   var spinOldXTranslateLocation = gl.getUniformLocation(spinProgram, "u_x_translate");
-    //   var spinOldYTranslateLocation = gl.getUniformLocation(spinProgram, "u_y_translate");
-    //   var spinImageLocation = gl.getUniformLocation(spinProgram, "u_image");
-    // 
-    //   gl.uniform2f(spinResolutionLocation, gl.canvas.width, gl.canvas.height);
-    //   gl.uniform1i(spinImageLocation, 0);
-    //   gl.uniform1f(spinWidthLocation, .123);
-    // 
-    //   function drawWaveSpin (time, movement) {
-    //     // old wave uniforms
-    //     gl.uniform1f(spinOffsetLocation, movement.texture_offset);
-    //     gl.uniform1f(spinXScaleBaseLocation, movement.xScaleBase);
-    //     gl.uniform1f(spinYScaleBaseLocation, movement.yScaleBase);
-    //     gl.uniform1f(spinXScaleVarienceLocation, movement.xScaleVarience);
-    //     gl.uniform1f(spinYScaleVarienceLocation, movement.yScaleVarience);
-    //     gl.uniform1f(spinXSkewVarienceLocation, movement.xSkewVarience);
-    //     gl.uniform1f(spinYSkewVarienceLocation, movement.ySkewVarience);
-    //     gl.uniform1f(spinInitialXLocation, movement.initialX);
-    //     gl.uniform1f(spinInitialYLocation, movement.initialY);
-    //     gl.uniform1f(spinOldXTranslateLocation, movement.translateX);
-    //     gl.uniform1f(spinOldYTranslateLocation, movement.translateY);
-    // 
-    //     // spin uniforms
-    //     gl.uniform1f(spinXTranslateLocation, movement.spin_translateX);
-    //     gl.uniform1f(spinYTranslateLocation, movement.spin_translateY);
-    //     gl.uniform1f(spinDegreesLocation, movement.spin_radians);
-    //     gl.uniform1f(endTimeLocation, ((waveDeltaTime * movement.speed) + movement.delay) % movement.period);
-    // 
-    //     gl.uniform1f(spinTimeLocation, (time * movement.spin_speed) + movement.spin_delay);
-    //     gl.uniform1f(spinFragTimeLocation, (time * movement.spin_speed) + -1.0);
-    //     gl.drawArrays(gl.TRIANGLES, 0, 6);
-    //   }
-    // 
-    //   var deltaTime = 0;
-    //   var startTime = performance.now();
-    //   function spinOutAnimation(time) {
-    //     deltaTime = time-startTime;
-    //     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    //     drawWaveSpin(deltaTime, wave1Movement);
-    //     drawWaveSpin(deltaTime, wave2Movement);
-    //     drawWaveSpin(deltaTime, wave3Movement);
-    //     drawWaveSpin(deltaTime, wave4Movement);
-    //     drawWaveSpin(deltaTime, wave5Movement);
-    //     drawWaveSpin(deltaTime, wave6Movement);
-    //     drawWaveSpin(deltaTime, wave7Movement);
-    //     drawWaveSpin(deltaTime, wave8Movement);
-    //     window.requestAnimationFrame(spinOutAnimation);
-    //   }
-    // 
-    //   cancelAnimationFrame(myReq);
-    //   spinOutAnimation(startTime);
-    // }
-    // document.onkeyup = handleKeyUp;
+    function handleKeyUp () {
+      gl.useProgram(spinProgram);
+
+      var spinResolutionLocation = gl.getUniformLocation(spinProgram, "u_resolution");
+      var spinTimeLocation = gl.getUniformLocation(spinProgram, "u_time");
+      var spinDegreesLocation = gl.getUniformLocation(spinProgram, "u_degrees");
+      var spinXTranslateLocation = gl.getUniformLocation(spinProgram, "u_x_spin_translate");
+      var spinYTranslateLocation = gl.getUniformLocation(spinProgram, "u_y_spin_translate");
+      var spinFragTimeLocation = gl.getUniformLocation(spinProgram, "u_spin_time");
+      var endTimeLocation = gl.getUniformLocation(spinProgram, "u_old_end_time");
+     
+      var spinWidthLocation = gl.getUniformLocation(spinProgram, "u_width");
+      var spinOffsetLocation = gl.getUniformLocation(spinProgram, "u_offset");
+      var spinResolutionLocation = gl.getUniformLocation(spinProgram, "u_resolution");
+      var spinInitialXLocation = gl.getUniformLocation(spinProgram, "u_x_coord");
+      var spinInitialYLocation = gl.getUniformLocation(spinProgram, "u_y_coord");
+      var spinXScaleBaseLocation = gl.getUniformLocation(spinProgram, "u_x_scale_base");
+      var spinYScaleBaseLocation = gl.getUniformLocation(spinProgram, "u_y_scale_base");
+      var spinXScaleVarienceLocation = gl.getUniformLocation(spinProgram, "u_x_scale_varience");
+      var spinYScaleVarienceLocation = gl.getUniformLocation(spinProgram, "u_y_scale_varience");
+      var spinXSkewVarienceLocation = gl.getUniformLocation(spinProgram, "u_x_skew_varience");
+      var spinYSkewVarienceLocation = gl.getUniformLocation(spinProgram, "u_y_skew_varience");
+      var spinOldXTranslateLocation = gl.getUniformLocation(spinProgram, "u_x_translate");
+      var spinOldYTranslateLocation = gl.getUniformLocation(spinProgram, "u_y_translate");
+      var spinImageLocation = gl.getUniformLocation(spinProgram, "u_image");
+      
+      gl.uniform2f(spinResolutionLocation, gl.canvas.width, gl.canvas.height);
+      gl.uniform1i(spinImageLocation, 0);
+      gl.uniform1f(spinWidthLocation, .123);
+
+      function drawWaveSpin (time, movement) {
+        // old wave uniforms
+        gl.uniform1f(spinOffsetLocation, movement.texture_offset);
+        gl.uniform1f(spinXScaleBaseLocation, movement.xScaleBase);
+        gl.uniform1f(spinYScaleBaseLocation, movement.yScaleBase);
+        gl.uniform1f(spinXScaleVarienceLocation, movement.xScaleVarience);
+        gl.uniform1f(spinYScaleVarienceLocation, movement.yScaleVarience);
+        gl.uniform1f(spinXSkewVarienceLocation, movement.xSkewVarience);
+        gl.uniform1f(spinYSkewVarienceLocation, movement.ySkewVarience);
+        gl.uniform1f(spinInitialXLocation, movement.initialX);
+        gl.uniform1f(spinInitialYLocation, movement.initialY);
+        gl.uniform1f(spinOldXTranslateLocation, movement.translateX);
+        gl.uniform1f(spinOldYTranslateLocation, movement.translateY);
+        
+        // spin uniforms
+        gl.uniform1f(spinXTranslateLocation, movement.spin_translateX);
+        gl.uniform1f(spinYTranslateLocation, movement.spin_translateY);
+        gl.uniform1f(spinDegreesLocation, movement.spin_radians);
+        gl.uniform1f(endTimeLocation, ((waveDeltaTime * movement.speed) + movement.delay) % movement.period);
+        
+        gl.uniform1f(spinTimeLocation, (time * movement.spin_speed) + movement.spin_delay);
+        gl.uniform1f(spinFragTimeLocation, (time * movement.spin_speed) + -1.0);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+      }
+
+      var deltaTime = 0;
+      var startTime = performance.now();
+      function spinOutAnimation(time) {
+        deltaTime = time-startTime;
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        drawWaveSpin(deltaTime, wave1Movement);
+        drawWaveSpin(deltaTime, wave2Movement);
+        drawWaveSpin(deltaTime, wave3Movement);
+        drawWaveSpin(deltaTime, wave4Movement);
+        drawWaveSpin(deltaTime, wave5Movement);
+        drawWaveSpin(deltaTime, wave6Movement);
+        drawWaveSpin(deltaTime, wave7Movement);
+        drawWaveSpin(deltaTime, wave8Movement);
+        window.requestAnimationFrame(spinOutAnimation);
+      }
+      
+      cancelAnimationFrame(myReq);
+      spinOutAnimation(startTime);
+    }
+    document.onkeyup = handleKeyUp;
+  }
+}
+
+
+
+
+// Utility Functions
+function resizeCanvasToDisplaySize(canvas, multiplier) {
+  multiplier = multiplier || 1;
+  var width  = canvas.clientWidth  * multiplier | 0;
+  var height = canvas.clientHeight * multiplier | 0;
+  if (canvas.width !== width ||  canvas.height !== height) {
+    canvas.width  = width;
+    canvas.height = height;
+    return true;
   }
 }
 

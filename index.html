@@ -11,41 +11,34 @@
     HTML5 is not supported.
   </canvas>
   
+  
   <script id="2d-vertex-shader-blur" type="x-shader/x-vertex">
   precision lowp float;
-
   attribute vec2 a_position;
   attribute vec2 a_texCoord;
   
   uniform vec2 u_resolution;
   
   varying vec2 v_texCoord;
-
   void main() {
     vec2 zeroToOne = a_position / u_resolution;
     vec2 zeroToTwo = zeroToOne * 2.0;
     vec2 clipSpace = zeroToTwo - 1.0;
-    gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
-    // gl_Position = a_position;
+    gl_Position = vec4(clipSpace * vec2(1, 1), 0, 1);
 
     v_texCoord = a_texCoord;
   }
-
   </script>
 
   <script id="2d-fragment-shader-blur" type="x-shader/x-fragment">
-
     precision lowp float;
     
     uniform sampler2D u_image;
     uniform vec2 dir;
     uniform vec2 u_textureSize;
     uniform float u_kernel[9];
-    uniform float u_kernelWeight;
-
     // the texCoords passed in from the vertex shader.
     varying vec2 v_texCoord;
-
     void main() {
       float hstep = dir.x;
       float vstep = dir.y;
@@ -63,15 +56,15 @@
          texture2D(u_image, v_texCoord + onePixel * vec2( 3.0*hstep,  3.0*vstep)) * u_kernel[7] + 
          texture2D(u_image, v_texCoord + onePixel * vec2( 4.0*hstep,  4.0*vstep)) * u_kernel[8];
       
-      color = color/u_kernelWeight;
       color = vec4(texture2D(u_image, v_texCoord).rgb, color.a);
       // color.a = step(0.01, color.r + color.g + color.b);
       
       gl_FragColor = color;
     }
   </script>
-  
-  
+
+
+  <!-- vertex shader -->
   <script id="2d-vertex-shader-spin" type="x-shader/x-vertex">
   precision lowp float;
   const float PI = 3.14159;
@@ -210,13 +203,10 @@
     
     zeroToOne += vec2(0.5); //return back to desired position
 
-    // convert from 0->1 to 0->2
     vec2 zeroToTwo = zeroToOne * 2.0;
-    // convert from 0->2 to -1->+1 (clipspace)
     vec2 clipSpace = zeroToTwo - 1.0;
-    gl_Position = vec4(clipSpace * vec2(1, -1), 1.0 - u_offset, 1);
-    // pass the texCoord to the fragment shader
-    // The GPU will interpolate this value between points.
+    gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
+
     v_texCoord = a_texCoord;
   }
   </script>
@@ -230,18 +220,17 @@
     uniform float u_width;
     uniform float u_offset;
 
-    // the texCoords passed in from the vertex shader.
     varying vec2 v_texCoord;
 
     void main() {
+
       vec2 texture_point = v_texCoord;
       texture_point.x *= u_width;
       texture_point.x += u_offset;
       vec4 color = texture2D(u_image, texture_point);
 
-      // color.a = smoothstep(0.00, 0.01, color.r + color.g + color.b);
-      color.a = min(0.8, color.a); //set variable here for opacity
-      // // color.a = step(0.01, color.r + color.g + color.b); // remove black and make it transparent
+      color.a = min(0.9, color.a); //set variable here for opacity
+      // color.a = step(0.01, color.r + color.g + color.b); // remove black and make it transparent
       color.b = v_texCoord.x;
       color.g = v_texCoord.y;
       color.r = 0.0;
