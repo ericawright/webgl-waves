@@ -18,9 +18,13 @@ function InitDemo() {
   // Create a buffer to put three 2d clip space points in
   var positionBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-  
+    
+  resizeCanvasToDisplaySize(gl.canvas);
+    
   // Set a rectangle the same size as the canvas.
-  setRectangle(gl, 0, 0, canvas.clientWidth, canvas.clientHeight);
+  setRectangle(gl, 0, 0, canvas.width, canvas.height);
+  
+  gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
 
   // provide texture coordinates for the rectangle.
   var texcoordBuffer = gl.createBuffer();
@@ -50,6 +54,7 @@ function InitDemo() {
   var offsetLocation = gl.getUniformLocation(program, "u_offset");
   var widthLocation = gl.getUniformLocation(program, "u_width");
   var timeLocation = gl.getUniformLocation(program, "u_time");
+  var zIndexLocation = gl.getUniformLocation(program, 'u_z_index');
   // Blur uniforms
   var textureSizeLocation = gl.getUniformLocation(blurProgram, "u_textureSize");
   var kernelLocation = gl.getUniformLocation(blurProgram, "u_kernel[0]");
@@ -57,10 +62,8 @@ function InitDemo() {
   var blurResolutionLocation = gl.getUniformLocation(blurProgram, "u_resolution");
   var blurImageLocation = gl.getUniformLocation(blurProgram, "u_image");
 
-  resizeCanvasToDisplaySize(gl.canvas);
-
   // Tell WebGL how to convert from clip space to pixels
-  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+  gl.viewport(0, 0, canvas.width, canvas.height);
 
   // Clear the canvas
   gl.clearColor(0, 0, 0, 0);
@@ -94,10 +97,10 @@ function InitDemo() {
       texcoordLocation, size, type, normalize, stride, offset);
 
   // set the resolution
-  gl.uniform2f(resolutionLocation, gl.canvas.width, gl.canvas.height);
+  gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
 
   var image = new Image();
-  image.src = "all-wavesa.png";
+  image.src = "all-waves-solida.png";
   image.onload = (event) => {
     var createAndSetupTexture = function () {
       var texture = gl.createTexture();
@@ -112,9 +115,10 @@ function InitDemo() {
     var originalImageTexture = createAndSetupTexture();
 
     // Upload the image into the texture.
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, event.target);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
  
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+    // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.enable(gl.BLEND);
     gl.disable(gl.DEPTH_TEST);
 
@@ -122,17 +126,28 @@ function InitDemo() {
     gl.uniform1f(widthLocation, .123); // Width of each image
 
     var framebuffers = [];
-     var gb2pass = [
-         0.110536,
-         0.110967,
-         0.111275,
-         0.111461,
-         0.111523,
-         0.111461,
-         0.111275,
-         0.110967,
-         0.110536
-       ];
+     // var gb2pass = [
+     //     0.110536,
+     //     0.110967,
+     //     0.111275,
+     //     0.111461,
+     //     0.111523,
+     //     0.111461,
+     //     0.111275,
+     //     0.110967,
+     //     0.110536
+     //   ];
+       var gb2pass = [
+        0.000229,
+        0.005977,
+        0.060598,
+        0.241732,
+        0.382928,
+        0.241732,
+        0.060598,
+        0.005977,
+        0.000229
+      ];
      
      var textures = [];
      var framebuffers = [];
@@ -140,7 +155,7 @@ function InitDemo() {
        var texture = createAndSetupTexture(gl);
        textures.push(texture);
     
-       // make the texture the same size as the image
+       // make the texture the same size as the canvas
        gl.texImage2D(
            gl.TEXTURE_2D, 0, gl.RGBA, canvas.width, canvas.height, 0,
            gl.RGBA, gl.UNSIGNED_BYTE, null);
@@ -169,6 +184,7 @@ function InitDemo() {
       gl.uniform1f(initialYLocation, movement.initialY);
       gl.uniform1f(xTranslateLocation, movement.translateX);
       gl.uniform1f(yTranslateLocation, movement.translateY);
+      gl.uniform1f(zIndexLocation, movement.zindex);
       gl.uniform1f(timeLocation, ((time * movement.speed) + movement.delay) % movement.period);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
@@ -188,6 +204,7 @@ function InitDemo() {
       speed: 0.0015,
       texture_offset: 0.0,
       period: 11,
+      zindex: 1,
       
       spin_delay: -1.0,
       spin_radians: 4.0,
@@ -210,6 +227,7 @@ function InitDemo() {
       speed: 0.0016,
       texture_offset: 0.124,
       period: 11,
+      zindex: 0.9,
       
       spin_delay: -1.0,
       spin_radians: 0.0,
@@ -232,6 +250,7 @@ function InitDemo() {
       speed: 0.0011,
       texture_offset: 0.2495,
       period: 11,
+      zindex: .8,
       
       spin_delay: -1.0,
       spin_radians: 2.1,
@@ -254,6 +273,7 @@ function InitDemo() {
       speed: 0.00018,
       texture_offset: 0.3735,
       period: 11,
+      zindex: .7,
       
       spin_delay: -1.0,
       spin_radians: 0.5,
@@ -277,6 +297,7 @@ function InitDemo() {
       speed: 0.0005,
       texture_offset: 0.4965,
       period: (4 * Math.PI),
+      zindex: .6,
       
       spin_delay: -1.0,
       spin_radians: 1.4,
@@ -300,6 +321,7 @@ function InitDemo() {
       speed: 0.00048,
       texture_offset: 0.6215,
       period: (4 * Math.PI),
+      zindex: .5,
       
       spin_delay: -1.0,
       spin_radians: 2.0,
@@ -323,6 +345,7 @@ function InitDemo() {
       speed: 0.0006,
       texture_offset: 0.747,
       period: (4 * Math.PI),
+      zindex: .4,
       
       spin_delay: -1.0,
       spin_radians: 3.0,
@@ -346,6 +369,7 @@ function InitDemo() {
       speed: 0.00051,
       texture_offset: 0.877,
       period: (4 * Math.PI),
+      zindex: 3,
       
       spin_delay: -1.0,
       spin_radians: 2.0,
@@ -364,44 +388,59 @@ function InitDemo() {
       // resizeCanvasToDisplaySize(gl.canvas); // can't resize?
       waveDeltaTime = time - waveStartTime;
       drawWaves(waveDeltaTime, wave1Movement);
-      // drawWaves(waveDeltaTime, wave2Movement);
-      // drawWaves(waveDeltaTime, wave3Movement);
-      // drawWaves(waveDeltaTime, wave4Movement);
-      // drawWaves(waveDeltaTime, wave5Movement);
-      // drawWaves(waveDeltaTime, wave6Movement);
-      // drawWaves(waveDeltaTime, wave7Movement);
-      // drawWaves(waveDeltaTime, wave8Movement);
+      drawWaves(waveDeltaTime, wave2Movement);
+      drawWaves(waveDeltaTime, wave3Movement);
+      drawWaves(waveDeltaTime, wave4Movement);
+      drawWaves(waveDeltaTime, wave5Movement);
+      drawWaves(waveDeltaTime, wave6Movement);
+      drawWaves(waveDeltaTime, wave7Movement);
+      drawWaves(waveDeltaTime, wave8Movement);
     
     }
+    let blur = 0;
     function animate(time) {
-      gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[0]);
+      // Start blur counter, then count down after click
+      // blur = Math.floor((Math.sin(time * .0005) + 1) * 5);
       gl.useProgram(program); // Use clip and move program
+      if (!blur) {
+        console.log("no blur")
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.bindTexture(gl.TEXTURE_2D, nextTexture);
+        clipAndPosition(time); // clip and move
+        myReq = window.requestAnimationFrame(animate);
+        return;
+      }
+      console.log('blur', blur);
       // Use first frame buffer
+      gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[0]);
       gl.bindTexture(gl.TEXTURE_2D, nextTexture);
       clipAndPosition(time); // clip and move
-      nextTexture = textures[0];
       
-      //Use second framebuffer 
-      gl.useProgram(blurProgram); // Use blur program
-      gl.uniform2f(textureSizeLocation, image.width, image.height);
-      gl.uniform1fv(kernelLocation, gb2pass);
-      gl.uniform2f(blurResolutionLocation, gl.canvas.width, gl.canvas.height);
-      gl.uniform1i(blurImageLocation, 0);
-      gl.uniform2f(directionLocation, 0.0, 1.0); // Blur vertical
-      
-      gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[1]);
-      gl.bindTexture(gl.TEXTURE_2D, nextTexture);
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-      gl.drawArrays(gl.TRIANGLES, 0, 6); //just draw and blur
-      nextTexture = textures[1];
-      
-      // Draw to canvas
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      gl.bindTexture(gl.TEXTURE_2D, nextTexture);
-      gl.uniform2f(directionLocation, 1.0, 0.0); // Blue horizontal
-      gl.drawArrays(gl.TRIANGLES, 0, 6); //just draw and blur
+      for (let i = 0; i <= blur; i++) {
+        nextTexture = textures[0];
+        //Use second framebuffer 
+        gl.useProgram(blurProgram); // Use blur program
+        gl.uniform2f(textureSizeLocation, canvas.width, canvas.height);
+        gl.uniform1fv(kernelLocation, gb2pass);
+        gl.uniform2f(blurResolutionLocation, canvas.width, canvas.height);
+        gl.uniform1i(blurImageLocation, 0);
+        gl.uniform2f(directionLocation, 0.0, 1.0); // Blur vertical
+        
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[1]);
+        gl.bindTexture(gl.TEXTURE_2D, nextTexture);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        gl.drawArrays(gl.TRIANGLES, 0, 6); //just draw and blur
+        nextTexture = textures[1];
+        gl.uniform2f(directionLocation, 1.0, 0.0); // Blur horizontal
+        
+        // Draw to canvas or framebuffer
+        gl.bindFramebuffer(gl.FRAMEBUFFER, i == blur? null : framebuffers[0]);
+        gl.bindTexture(gl.TEXTURE_2D, nextTexture);
+        gl.drawArrays(gl.TRIANGLES, 0, 6); //just draw and blur
+        nextTexture = originalImageTexture;
+      }
+
       myReq = window.requestAnimationFrame(animate);
-      nextTexture = originalImageTexture;
     }
     requestAnimationFrame(animate);
     

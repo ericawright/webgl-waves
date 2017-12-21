@@ -56,10 +56,8 @@
          texture2D(u_image, v_texCoord + onePixel * vec2( 3.0*hstep,  3.0*vstep)) * u_kernel[7] + 
          texture2D(u_image, v_texCoord + onePixel * vec2( 4.0*hstep,  4.0*vstep)) * u_kernel[8];
       
-      color = vec4(texture2D(u_image, v_texCoord).rgb, color.a);
-      // color.a = step(0.01, color.r + color.g + color.b);
-      
       gl_FragColor = color;
+      // gl_FragColor.rgb *= gl_FragColor.a;
     }
   </script>
 
@@ -170,6 +168,7 @@
   uniform float u_x_skew_varience;
   uniform float u_y_translate;
   uniform float u_x_translate;
+  uniform float u_z_index;
   
   varying vec2 v_texCoord;
   
@@ -230,12 +229,14 @@
       texture_point.x += u_offset;
       vec4 color = texture2D(u_image, texture_point);
 
-      color.a = min(0.9, color.a); //set variable here for opacity
+      
       // color.a = step(0.01, color.r + color.g + color.b); // remove black and make it transparent
+      color.a = min(0.9, color.a); //set variable here for opacity
       color.b = v_texCoord.x;
       color.g = v_texCoord.y;
       
       gl_FragColor = color;
+      gl_FragColor.rgb *= gl_FragColor.a;
     }
   </script>
   
