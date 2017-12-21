@@ -1,6 +1,7 @@
 body {
   margin: 0;
-  background: linear-gradient(0deg, #0d0dae, #6502b6);
+  background: url('newtab.png');
+  background-size: cover;
 }
 canvas {
   width: 100vw;
