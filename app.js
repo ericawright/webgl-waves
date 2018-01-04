@@ -8,7 +8,6 @@ function InitDemo() {
     return;
   }
   var program = createProgramFromScripts(gl, ["2d-vertex-shader", "2d-fragment-shader"]);
-  var spinProgram = createProgramFromScripts(gl, ["2d-vertex-shader-spin", "2d-fragment-shader-spin"]);
   var blurProgram = createProgramFromScripts(gl, ["2d-vertex-shader-blur", "2d-fragment-shader-blur"]);
 
   // look up where the vertex data needs to go.
@@ -54,13 +53,20 @@ function InitDemo() {
   var offsetLocation = gl.getUniformLocation(program, "u_offset");
   var widthLocation = gl.getUniformLocation(program, "u_width");
   var timeLocation = gl.getUniformLocation(program, "u_time");
-  var zIndexLocation = gl.getUniformLocation(program, 'u_z_index');
+  // var zIndexLocation = gl.getUniformLocation(program, "u_z_index");
   // Blur uniforms
   var textureSizeLocation = gl.getUniformLocation(blurProgram, "u_textureSize");
   var kernelLocation = gl.getUniformLocation(blurProgram, "u_kernel[0]");
   var directionLocation = gl.getUniformLocation(blurProgram, "dir");
   var blurResolutionLocation = gl.getUniformLocation(blurProgram, "u_resolution");
   var blurImageLocation = gl.getUniformLocation(blurProgram, "u_image");
+  
+  // Spin uniforms
+  var spinTimerLocation = gl.getUniformLocation(program, "u_spin_timer");
+  var spinDegreesLocation = gl.getUniformLocation(program, "u_degrees");
+  var spinXTranslateLocation = gl.getUniformLocation(program, "u_x_spin_translate");
+  var spinYTranslateLocation = gl.getUniformLocation(program, "u_y_spin_translate");
+  var spinFragTimeLocation = gl.getUniformLocation(program, "u_spin_time_frag");
 
   // Tell WebGL how to convert from clip space to pixels
   gl.viewport(0, 0, canvas.width, canvas.height);
@@ -124,8 +130,10 @@ function InitDemo() {
 
     gl.uniform1i(imageLocation, 0);
     gl.uniform1f(widthLocation, .123); // Width of each image
+    gl.uniform1f(spinTimerLocation, 0); // Default spin timer starts at 0
 
     var framebuffers = [];
+    // more blur
      // var gb2pass = [
      //     0.110536,
      //     0.110967,
@@ -137,6 +145,8 @@ function InitDemo() {
      //     0.110967,
      //     0.110536
      //   ];
+     
+     // Less blur
        var gb2pass = [
         0.000229,
         0.005977,
@@ -184,7 +194,7 @@ function InitDemo() {
       gl.uniform1f(initialYLocation, movement.initialY);
       gl.uniform1f(xTranslateLocation, movement.translateX);
       gl.uniform1f(yTranslateLocation, movement.translateY);
-      gl.uniform1f(zIndexLocation, movement.zindex);
+      // gl.uniform1f(zIndexLocation, movement.zindex);
       gl.uniform1f(timeLocation, ((time * movement.speed) + movement.delay) % movement.period);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
@@ -399,23 +409,23 @@ function InitDemo() {
     }
     let blur = 0;
     function animate(time) {
+      console.log("animate: ", gl.getUniform(program, timeLocation));
+      // console.log("time in original: ", time);
       // Start blur counter, then count down after click
       // blur = Math.floor((Math.sin(time * .0005) + 1) * 5);
       gl.useProgram(program); // Use clip and move program
       if (!blur) {
-        console.log("no blur")
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.bindTexture(gl.TEXTURE_2D, nextTexture);
         clipAndPosition(time); // clip and move
         myReq = window.requestAnimationFrame(animate);
         return;
       }
-      console.log('blur', blur);
       // Use first frame buffer
       gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[0]);
       gl.bindTexture(gl.TEXTURE_2D, nextTexture);
       clipAndPosition(time); // clip and move
-      
+
       for (let i = 0; i <= blur; i++) {
         nextTexture = textures[0];
         //Use second framebuffer 
@@ -437,66 +447,36 @@ function InitDemo() {
         gl.bindFramebuffer(gl.FRAMEBUFFER, i == blur? null : framebuffers[0]);
         gl.bindTexture(gl.TEXTURE_2D, nextTexture);
         gl.drawArrays(gl.TRIANGLES, 0, 6); //just draw and blur
-        nextTexture = originalImageTexture;
       }
-
+      nextTexture = originalImageTexture;
       myReq = window.requestAnimationFrame(animate);
     }
     requestAnimationFrame(animate);
     
-    
     // Change to rotation/spin shaders on keypress
     function handleKeyUp () {
-      gl.useProgram(spinProgram);
-
-      var spinResolutionLocation = gl.getUniformLocation(spinProgram, "u_resolution");
-      var spinTimeLocation = gl.getUniformLocation(spinProgram, "u_time");
-      var spinDegreesLocation = gl.getUniformLocation(spinProgram, "u_degrees");
-      var spinXTranslateLocation = gl.getUniformLocation(spinProgram, "u_x_spin_translate");
-      var spinYTranslateLocation = gl.getUniformLocation(spinProgram, "u_y_spin_translate");
-      var spinFragTimeLocation = gl.getUniformLocation(spinProgram, "u_spin_time");
-      var endTimeLocation = gl.getUniformLocation(spinProgram, "u_old_end_time");
-     
-      var spinWidthLocation = gl.getUniformLocation(spinProgram, "u_width");
-      var spinOffsetLocation = gl.getUniformLocation(spinProgram, "u_offset");
-      var spinResolutionLocation = gl.getUniformLocation(spinProgram, "u_resolution");
-      var spinInitialXLocation = gl.getUniformLocation(spinProgram, "u_x_coord");
-      var spinInitialYLocation = gl.getUniformLocation(spinProgram, "u_y_coord");
-      var spinXScaleBaseLocation = gl.getUniformLocation(spinProgram, "u_x_scale_base");
-      var spinYScaleBaseLocation = gl.getUniformLocation(spinProgram, "u_y_scale_base");
-      var spinXScaleVarienceLocation = gl.getUniformLocation(spinProgram, "u_x_scale_varience");
-      var spinYScaleVarienceLocation = gl.getUniformLocation(spinProgram, "u_y_scale_varience");
-      var spinXSkewVarienceLocation = gl.getUniformLocation(spinProgram, "u_x_skew_varience");
-      var spinYSkewVarienceLocation = gl.getUniformLocation(spinProgram, "u_y_skew_varience");
-      var spinOldXTranslateLocation = gl.getUniformLocation(spinProgram, "u_x_translate");
-      var spinOldYTranslateLocation = gl.getUniformLocation(spinProgram, "u_y_translate");
-      var spinImageLocation = gl.getUniformLocation(spinProgram, "u_image");
-      
-      gl.uniform2f(spinResolutionLocation, gl.canvas.width, gl.canvas.height);
-      gl.uniform1i(spinImageLocation, 0);
-      gl.uniform1f(spinWidthLocation, .123);
+      console.log("keyup: ", gl.getUniform(program, timeLocation));
 
       function drawWaveSpin (time, movement) {
-        // old wave uniforms
-        gl.uniform1f(spinOffsetLocation, movement.texture_offset);
-        gl.uniform1f(spinXScaleBaseLocation, movement.xScaleBase);
-        gl.uniform1f(spinYScaleBaseLocation, movement.yScaleBase);
-        gl.uniform1f(spinXScaleVarienceLocation, movement.xScaleVarience);
-        gl.uniform1f(spinYScaleVarienceLocation, movement.yScaleVarience);
-        gl.uniform1f(spinXSkewVarienceLocation, movement.xSkewVarience);
-        gl.uniform1f(spinYSkewVarienceLocation, movement.ySkewVarience);
-        gl.uniform1f(spinInitialXLocation, movement.initialX);
-        gl.uniform1f(spinInitialYLocation, movement.initialY);
-        gl.uniform1f(spinOldXTranslateLocation, movement.translateX);
-        gl.uniform1f(spinOldYTranslateLocation, movement.translateY);
-        
+        gl.uniform1f(offsetLocation, movement.texture_offset);
+        gl.uniform1f(xScaleBaseLocation, movement.xScaleBase);
+        gl.uniform1f(yScaleBaseLocation, movement.yScaleBase);
+        gl.uniform1f(xScaleVarienceLocation, movement.xScaleVarience);
+        gl.uniform1f(yScaleVarienceLocation, movement.yScaleVarience);
+        gl.uniform1f(xSkewVarienceLocation, movement.xSkewVarience);
+        gl.uniform1f(ySkewVarienceLocation, movement.ySkewVarience);
+        gl.uniform1f(initialXLocation, movement.initialX);
+        gl.uniform1f(initialYLocation, movement.initialY);
+        gl.uniform1f(xTranslateLocation, movement.translateX);
+        gl.uniform1f(yTranslateLocation, movement.translateY);
+        // gl.uniform1f(zIndexLocation, movement.zindex);
+      
         // spin uniforms
+        gl.uniform1f(spinTimerLocation, (time * movement.spin_speed) + movement.spin_delay);
         gl.uniform1f(spinXTranslateLocation, movement.spin_translateX);
         gl.uniform1f(spinYTranslateLocation, movement.spin_translateY);
         gl.uniform1f(spinDegreesLocation, movement.spin_radians);
-        gl.uniform1f(endTimeLocation, ((waveDeltaTime * movement.speed) + movement.delay) % movement.period);
-        
-        gl.uniform1f(spinTimeLocation, (time * movement.spin_speed) + movement.spin_delay);
+
         gl.uniform1f(spinFragTimeLocation, (time * movement.spin_speed) + -1.0);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
       }
@@ -523,6 +503,8 @@ function InitDemo() {
     document.onkeyup = handleKeyUp;
   }
 }
+
+
 
 
 

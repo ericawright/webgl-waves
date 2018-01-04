@@ -10,6 +10,8 @@
   <canvas id="canvas">
     HTML5 is not supported.
   </canvas>
+  <div>
+  </div>
   
   
   <script id="2d-vertex-shader-blur" type="x-shader/x-vertex">
@@ -37,7 +39,7 @@
     uniform vec2 dir;
     uniform vec2 u_textureSize;
     uniform float u_kernel[9];
-    // the texCoords passed in from the vertex shader.
+
     varying vec2 v_texCoord;
     void main() {
       float hstep = dir.x;
@@ -59,94 +61,6 @@
       gl_FragColor = color;
       // gl_FragColor.rgb *= gl_FragColor.a;
     }
-  </script>
-
-
-  <!-- vertex shader -->
-  <script id="2d-vertex-shader-spin" type="x-shader/x-vertex">
-  precision lowp float;
-  const float PI = 3.14159;
-
-  attribute vec2 a_position;
-  attribute vec2 a_texCoord;
-
-  uniform vec2 u_resolution;
-  uniform float u_time;
-  uniform float u_y_spin_translate;
-  uniform float u_x_spin_translate;
-  uniform float u_degrees;
-  
-  uniform float u_old_end_time;
-  uniform float u_x_coord;
-  uniform float u_y_coord;
-  uniform float u_y_scale_base;
-  uniform float u_x_scale_base;
-  uniform float u_y_scale_varience;
-  uniform float u_x_scale_varience;
-  uniform float u_y_skew_varience;
-  uniform float u_x_skew_varience;
-  uniform float u_y_translate;
-  uniform float u_x_translate;
-  
-  varying vec2 v_texCoord;
-  
-  mat2 scale(vec2 _scale) {
-    return mat2(_scale.x,0.0,
-                0.0,_scale.y);
-  }
-  
-  mat2 skew(vec2 _skew) {
-    return mat2(1.0, _skew.x,
-                _skew.y, 1.0);
-  }
-  
-  mat2 rotate(float _angle){
-    return mat2(cos(_angle),-sin(_angle),
-                sin(_angle),cos(_angle));
-  }
-
-  
-  void main() {
-    // convert the rectangle from pixels to 0.0 to 1.0
-    vec2 zeroToOne = a_position / u_resolution;
-    
-    zeroToOne -= vec2(0.5); //move to 0,0 to shift from
-    
-    // Do what was done by the old shader to start at the same position
-    float oldTime = max(u_old_end_time, 3.0 * PI/2.0);
-    oldTime = min(oldTime, 7.0 * PI/2.0);
-    float y_scale = u_y_scale_base + u_y_scale_varience * (sin(oldTime) + 1.0);
-    float x_scale = u_x_scale_base + u_x_scale_varience * (sin(oldTime) + 1.0);
-    zeroToOne = scale(vec2(x_scale, y_scale)) * zeroToOne;
-    
-    float x_skew = u_x_skew_varience * (sin(oldTime) + 1.0);
-    float y_skew = u_y_skew_varience * (sin(oldTime) + 1.0);
-    zeroToOne = zeroToOne * skew(vec2(x_skew, y_skew));
-    
-    zeroToOne -= vec2(u_x_coord, u_y_coord); //initial positioning
-    zeroToOne -= vec2(u_x_translate * (sin(oldTime) + 1.0), u_y_translate * (sin(oldTime) + 1.0));
-    // End what was done by old shader
-  
-    
-    float time = max(u_time, 0.0); // allow delay if passed in - replace 0.0 with variable
-    time = min(time, u_degrees); // count up by time to a certain degree, don't go past that degree
-    zeroToOne = rotate(-time) * zeroToOne; // -time to always rotate clockwise
-    
-    float translateTime = min(u_time, 1.0); // 1.0 = don't go further than amount declared
-    translateTime = max(translateTime, 0.0); // delay at first - currently 0.0
-    zeroToOne -= vec2(u_x_spin_translate * translateTime, u_y_spin_translate * translateTime);
-    
-    
-    zeroToOne += vec2(0.5); //return back to desired position
-
-
-    vec2 zeroToTwo = zeroToOne * 2.0;
-    vec2 clipSpace = zeroToTwo - 1.0;
-    gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
-    // pass the texCoord to the fragment shader
-    // The GPU will interpolate this value between points.
-    v_texCoord = a_texCoord;
-  }
   </script>
   
   <script id="2d-vertex-shader" type="x-shader/x-vertex">
@@ -170,16 +84,26 @@
   uniform float u_x_translate;
   uniform float u_z_index;
   
+  uniform float u_y_spin_translate;
+  uniform float u_x_spin_translate;
+  uniform float u_degrees;
+  uniform float u_spin_timer;
+  
   varying vec2 v_texCoord;
   
   mat2 scale(vec2 _scale) {
-    return mat2(_scale.x,0.0,
-                0.0,_scale.y);
+    return mat2(_scale.x, 0.0,
+                0.0, _scale.y);
   }
   
   mat2 skew(vec2 _skew) {
     return mat2(1.0, _skew.x,
                 _skew.y, 1.0);
+  }
+  
+  mat2 rotate(float _angle) {
+    return mat2(cos(_angle), -sin(_angle),
+                sin(_angle), cos(_angle));
   }
   
   void main() {
@@ -201,6 +125,16 @@
     zeroToOne -= vec2(u_x_coord, u_y_coord); //initial positioning
     zeroToOne -= vec2(u_x_translate * (sin(time) + 1.0), u_y_translate * (sin(time) + 1.0));
     
+    // Spin
+    // float spin_time = max(u_spin_timer, 0.0); // allow delay if passed in - replace 0.0 with variable
+    // spin_time = min(spin_time, u_degrees); // count up by spin_time to a certain degree, don't go past that degree
+    // zeroToOne = rotate(-spin_time) * zeroToOne; // -spin_time to always rotate clockwise
+    // 
+    // float translateTime = min(u_spin_timer, 1.0); // 1.0 = don't go further than amount declared
+    // translateTime = max(translateTime, 0.0); // delay at first - currently 0.0
+    // zeroToOne -= vec2(u_x_spin_translate * translateTime, u_y_spin_translate * translateTime);
+    // // end spin
+    
     zeroToOne += vec2(0.5); //return back to desired position
 
     vec2 zeroToTwo = zeroToOne * 2.0;
@@ -219,6 +153,7 @@
     uniform sampler2D u_image;
     uniform float u_width;
     uniform float u_offset;
+    uniform float u_spin_time_frag;
 
     varying vec2 v_texCoord;
 
@@ -231,6 +166,7 @@
 
       
       // color.a = step(0.01, color.r + color.g + color.b); // remove black and make it transparent
+      // color.r = u_spin_time_frag;
       color.a = min(0.9, color.a); //set variable here for opacity
       color.b = v_texCoord.x;
       color.g = v_texCoord.y;
@@ -244,7 +180,6 @@
     precision lowp float;
     
     uniform sampler2D u_image;
-    uniform float u_colour_change;
     uniform float u_spin_time;
     uniform float u_width;
     uniform float u_offset;
