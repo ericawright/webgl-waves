@@ -10,7 +10,18 @@
   <canvas id="canvas" width="10000" height="2048">
     HTML5 is not supported.
   </canvas>
-  <div>
+  <div id="scene">
+    <div class="fxaccounts-container">
+      <div id="left-divider">
+        <div id="firefox-logo"></div>
+        <h1 id="title">Already using Firefox?</h1>
+        <p class="content">Sign in to your account and we’ll sync the bookmarks, passwords and other great things you’ve saved to Firefox on other devices.</p>
+        <a href="https://www.mozilla.org/en-US/firefox/features/sync/"target="_blank">Learn more about Firefox Accounts</a>
+      </div>
+      <div class="fxaccounts" id="fxa-iframe-config">
+        <img id="sign-in" src="sign-in.png"></img>
+      </div>
+    </div>
   </div>
   
   
@@ -126,14 +137,14 @@
     zeroToOne -= vec2(u_x_translate * (sin(time) + 1.0), u_y_translate * (sin(time) + 1.0));
     
     // Spin
-    // float spin_time = max(u_spin_timer, 0.0); // allow delay if passed in - replace 0.0 with variable
-    // spin_time = min(spin_time, u_degrees); // count up by spin_time to a certain degree, don't go past that degree
-    // zeroToOne = rotate(-spin_time) * zeroToOne; // -spin_time to always rotate clockwise
-    // 
-    // float translateTime = min(u_spin_timer, 1.0); // 1.0 = don't go further than amount declared
-    // translateTime = max(translateTime, 0.0); // delay at first - currently 0.0
-    // zeroToOne -= vec2(u_x_spin_translate * translateTime, u_y_spin_translate * translateTime);
-    // // end spin
+    float spin_time = max(u_spin_timer, 0.0); // allow delay if passed in - replace 0.0 with variable
+    spin_time = min(spin_time, u_degrees); // count up by spin_time to a certain degree, don't go past that degree
+    zeroToOne = rotate(-spin_time) * zeroToOne; // -spin_time to always rotate clockwise
+    
+    float translateTime = min(u_spin_timer, 1.0); // 1.0 = don't go further than amount declared
+    translateTime = max(translateTime, 0.0); // delay at first - currently 0.0
+    zeroToOne -= vec2(u_x_spin_translate * translateTime, u_y_spin_translate * translateTime);
+    // end spin
     
     zeroToOne += vec2(0.5); //return back to desired position
 
@@ -166,7 +177,7 @@
 
       
       // color.a = step(0.01, color.r + color.g + color.b); // remove black and make it transparent
-      // color.r = u_spin_time_frag;
+      color.r = u_spin_time_frag;
       color.a = min(0.9, color.a); //set variable here for opacity
       color.b = v_texCoord.x;
       color.g = v_texCoord.y;
