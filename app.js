@@ -2,6 +2,10 @@
 
 // Entrypoint
 function InitDemo() {
+  var scene = document.getElementById('scene');
+    
+  scene.dataset.content = 'true';
+  
   var canvas = document.getElementById("canvas");
   var gl = canvas.getContext("webgl");
   if (!gl) {
@@ -210,7 +214,7 @@ function InitDemo() {
       initialY: 0.1,
       translateX: 0.0,
       translateY: 0.0,
-      delay: 3.2,
+      delay: 4.5,
       speed: 0.0015,
       texture_offset: 0.0,
       period: 11,
@@ -233,7 +237,7 @@ function InitDemo() {
       initialY: -0.3,
       translateX: 0.0,
       translateY: 0.0,
-      delay: 3.2,
+      delay: 4.5,
       speed: 0.0016,
       texture_offset: 0.124,
       period: 11,
@@ -256,7 +260,7 @@ function InitDemo() {
       initialY: -0.5,
       translateX: 0.0,
       translateY: 0.0,
-      delay: 3.2,
+      delay: 4.5,
       speed: 0.0011,
       texture_offset: 0.2495,
       period: 11,
@@ -279,7 +283,7 @@ function InitDemo() {
       initialY: -0.8,
       translateX: 0.0,
       translateY: 0.0,
-      delay: 3.2,
+      delay: 4.5,
       speed: 0.00018,
       texture_offset: 0.3735,
       period: 11,
@@ -303,7 +307,7 @@ function InitDemo() {
       initialY: 0.15,
       translateX: 0.0,
       translateY: -0.1,
-      delay: 3.2,
+      delay: 4.5,
       speed: 0.0005,
       texture_offset: 0.4965,
       period: (4 * Math.PI),
@@ -327,7 +331,7 @@ function InitDemo() {
       initialY: 0.4,
       translateX: 0.0,
       translateY: 0.0,
-      delay: 3.2,
+      delay: 4.5,
       speed: 0.00048,
       texture_offset: 0.6215,
       period: (4 * Math.PI),
@@ -351,7 +355,7 @@ function InitDemo() {
       initialY: 0.4,
       translateX: 0.0,
       translateY: 0.0,
-      delay: 3.2,
+      delay: 4.5,
       speed: 0.0006,
       texture_offset: 0.747,
       period: (4 * Math.PI),
@@ -375,7 +379,7 @@ function InitDemo() {
       initialY: 0.3,
       translateX: 0.0,
       translateY: 0.0,
-      delay: 3.2,
+      delay: 4.5,
       speed: 0.00051,
       texture_offset: 0.877,
       period: (4 * Math.PI),
@@ -409,8 +413,8 @@ function InitDemo() {
     }
     let blur = 0;
     function animate(time) {
-      console.log("animate: ", gl.getUniform(program, timeLocation));
-      // console.log("time in original: ", time);
+      // console.log("animate: ", gl.getUniform(program, timeLocation));
+
       // Start blur counter, then count down after click
       // blur = Math.floor((Math.sin(time * .0005) + 1) * 5);
       gl.useProgram(program); // Use clip and move program
@@ -453,9 +457,9 @@ function InitDemo() {
     }
     requestAnimationFrame(animate);
     
-    // Change to rotation/spin shaders on keypress
-    function handleKeyUp () {
-      console.log("keyup: ", gl.getUniform(program, timeLocation));
+    // Change to rotation/spin shaders on click
+    function handleClick () {
+      scene.dataset.signIn = 'true';
 
       function drawWaveSpin (time, movement) {
         gl.uniform1f(offsetLocation, movement.texture_offset);
@@ -470,6 +474,8 @@ function InitDemo() {
         gl.uniform1f(xTranslateLocation, movement.translateX);
         gl.uniform1f(yTranslateLocation, movement.translateY);
         // gl.uniform1f(zIndexLocation, movement.zindex);
+        gl.uniform1f(timeLocation, ((waveDeltaTime * movement.speed) + movement.delay) % movement.period);
+        
       
         // spin uniforms
         gl.uniform1f(spinTimerLocation, (time * movement.spin_speed) + movement.spin_delay);
@@ -500,7 +506,7 @@ function InitDemo() {
       cancelAnimationFrame(myReq);
       spinOutAnimation(startTime);
     }
-    document.onkeyup = handleKeyUp;
+    document.getElementById("sign-in").onclick = handleClick;
   }
 }
 

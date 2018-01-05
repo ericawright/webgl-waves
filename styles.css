@@ -8,6 +8,99 @@ canvas {
   height: 100vh;
   display: block;
 }
-h1 {
-  display: none;
+
+#left-divider {
+    position: relative;
+    float: left;
+    clear: both;
+    width: 441px;
+}
+
+.content {
+    line-height: 1.5;
+    margin-bottom: 48px;
+    max-width: 352px;
+}
+
+a {
+    color: #fff;
+    display: block;
+    font-weight: 400;
+}
+
+#title {
+    font-weight: normal;
+    margin: 40px 0 10px;
+}
+
+.fxaccounts-container {
+    bottom: 0;
+    color: #fff;
+    height: 424px;
+    left: 0;
+    margin: auto;
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 819px;
+    z-index: 10;
+}
+
+#title,
+.content,
+a {
+    opacity: 0;
+    transform: translateY(-5px);
+}
+
+#sign-in {
+  width: 358px;
+  opacity: 0;
+  transform: scale(.8);
+}
+
+#firefox-logo {
+  background-image: url('logo-quantum.png');
+  background-repeat: no-repeat;
+  background-size: 90px 90px;
+  height: 90px;
+  width: 90px;
+  transition: opacity 1s 1.8s;
+  opacity: 0;
+}
+
+
+*[data-content=true] #firefox-logo {
+  opacity: 1;
+}
+
+*[data-content=true] #sign-in {
+  transition: opacity 1s 2s, transform 1s 2s;
+  opacity: .85;
+  transform: scale(1);
+}
+
+*[data-content=true] #title,
+*[data-content=true] .content,
+*[data-content=true] a {
+    transition: transform .5s, opacity .8s;
+    transform: translateY(0);
+    opacity: 1;
+}
+
+*[data-content=true] #title {
+    transition-delay: 1.8s;
+}
+
+*[data-content=true] .content {
+    transition-delay: 2s;
+}
+
+*[data-content=true] a {
+    transition-delay: 2.2s;
+}
+
+#scene[data-sign-in=true] .fxaccounts-container {
+  transition: opacity .3s;
+  opacity: 0;
 }
