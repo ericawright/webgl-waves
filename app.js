@@ -203,7 +203,6 @@ function InitDemo() {
       gl.uniform1f(initialYLocation, movement.initialY);
       gl.uniform1f(xTranslateLocation, movement.translateX);
       gl.uniform1f(yTranslateLocation, movement.translateY);
-      // gl.uniform1f(zIndexLocation, movement.zindex);
       gl.uniform1f(timeLocation, ((time * movement.speed) + movement.delay) % movement.period);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
@@ -421,7 +420,7 @@ function InitDemo() {
       // console.log("animate: ", gl.getUniform(program, timeLocation));
 
       // Start blur counter, then count down after click
-      // blur = Math.floor((Math.sin(time * .0005) + 1) * 5);
+      blur = Math.min(Math.floor((time * .0004)), 15);
       gl.useProgram(program); // Use clip and move program
       if (!blur) {
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -464,6 +463,9 @@ function InitDemo() {
     
     // Change to rotation/spin shaders on click
     function handleClick () {
+      gl.useProgram(program);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.bindTexture(gl.TEXTURE_2D, nextTexture);
       scene.dataset.signIn = 'true';
 
       function drawWaveSpin (time, movement) {
@@ -495,7 +497,7 @@ function InitDemo() {
       var deltaTime = 0;
       var startTime = performance.now();
       function spinOutAnimation(time) {
-        deltaTime = time-startTime;
+        deltaTime = time - startTime;
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         drawWaveSpin(deltaTime, wave1Movement);
         drawWaveSpin(deltaTime, wave2Movement);

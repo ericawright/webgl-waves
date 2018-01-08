@@ -103,4 +103,11 @@ a {
 #scene[data-sign-in=true] .fxaccounts-container {
   transition: opacity .3s;
   opacity: 0;
+  animation: HideVisibility 0s .3s 1 forwards;
+}
+
+@keyframes HideVisibility {
+    100% {
+        visibility: collapse;
+    }
 }

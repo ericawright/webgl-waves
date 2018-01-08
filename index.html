@@ -70,7 +70,7 @@
          texture2D(u_image, v_texCoord + onePixel * vec2( 4.0*hstep,  4.0*vstep)) * u_kernel[8];
       
       gl_FragColor = color;
-      // gl_FragColor.rgb *= gl_FragColor.a;
+      gl_FragColor.rgb *= gl_FragColor.a;
     }
   </script>
   
