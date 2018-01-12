@@ -26,8 +26,6 @@ function InitDemo() {
     
   // Set a rectangle the same size as the canvas.
   setRectangle(gl, 0, 0, canvas.width, canvas.height);
-  
-  gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
 
   // provide texture coordinates for the rectangle.
   var texcoordBuffer = gl.createBuffer();
@@ -47,15 +45,15 @@ function InitDemo() {
   var initialYLocation = gl.getUniformLocation(program, "u_y_coord");
   var xScaleBaseLocation = gl.getUniformLocation(program, "u_x_scale_base");
   var yScaleBaseLocation = gl.getUniformLocation(program, "u_y_scale_base");
-  var xScaleVarienceLocation = gl.getUniformLocation(program, "u_x_scale_varience");
-  var yScaleVarienceLocation = gl.getUniformLocation(program, "u_y_scale_varience");
-  var xSkewVarienceLocation = gl.getUniformLocation(program, "u_x_skew_varience");
-  var ySkewVarienceLocation = gl.getUniformLocation(program, "u_y_skew_varience");
+  var xScaleVarianceLocation = gl.getUniformLocation(program, "u_x_scale_variance");
+  var yScaleVarianceLocation = gl.getUniformLocation(program, "u_y_scale_variance");
+  var xSkewVarianceLocation = gl.getUniformLocation(program, "u_x_skew_variance");
+  var ySkewVarianceLocation = gl.getUniformLocation(program, "u_y_skew_variance");
   var xTranslateLocation = gl.getUniformLocation(program, "u_x_translate");
   var yTranslateLocation = gl.getUniformLocation(program, "u_y_translate");
   var imageLocation = gl.getUniformLocation(program, "u_image");
   var offsetLocation = gl.getUniformLocation(program, "u_offset");
-  var widthLocation = gl.getUniformLocation(program, "u_width");
+  var sizeLocation = gl.getUniformLocation(program, "u_size");
   var timeLocation = gl.getUniformLocation(program, "u_time");
   // var zIndexLocation = gl.getUniformLocation(program, "u_z_index");
   // Blur uniforms
@@ -73,7 +71,7 @@ function InitDemo() {
   var spinFragTimeLocation = gl.getUniformLocation(program, "u_spin_time_frag");
 
   // Tell WebGL how to convert from clip space to pixels
-  gl.viewport(0, 0, canvas.width, canvas.height);
+  // gl.viewport(0, 0, canvas.width, canvas.height);
 
   // Clear the canvas
   gl.clearColor(0, 0, 0, 0);
@@ -106,11 +104,8 @@ function InitDemo() {
   gl.vertexAttribPointer(
       texcoordLocation, size, type, normalize, stride, offset);
 
-  // set the resolution
-  gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
-
   var image = new Image();
-  image.src = "all-waves-solida.png";
+  image.src = "all-solid-square-bw.gif";
   image.onload = (event) => {
     var createAndSetupTexture = function () {
       var texture = gl.createTexture();
@@ -128,15 +123,15 @@ function InitDemo() {
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
  
     // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    // gl.blendFunc(gl.ONE, gl.DST_COLOR);
     gl.disable(gl.DEPTH_TEST);
 
     gl.uniform1i(imageLocation, 0);
-    gl.uniform1f(widthLocation, .123); // Width of each image
+    gl.uniform1f(sizeLocation, .123); // Width of each image
     gl.uniform1f(spinTimerLocation, 0); // Default spin timer starts at 0
 
-    var framebuffers = [];
     // more blur
      // var gb2pass = [
      //     0.110536,
@@ -151,17 +146,30 @@ function InitDemo() {
      //   ];
      
      // Less blur
-       var gb2pass = [
-        0.000229,
-        0.005977,
-        0.060598,
-        0.241732,
-        0.382928,
-        0.241732,
-        0.060598,
-        0.005977,
-        0.000229
-      ];
+      //  var gb2pass = [
+      //   0.000229,
+      //   0.005977,
+      //   0.060598,
+      //   0.241732,
+      //   0.382928,
+      //   0.241732,
+      //   0.060598,
+      //   0.005977,
+      //   0.000229
+      // ];
+      
+      //box blur
+      var gb2pass = [
+       1,
+       2,
+       3,
+       3,
+       5,
+       3,
+       3,
+       2,
+       1
+     ];
      
      var textures = [];
      var framebuffers = [];
@@ -169,9 +177,10 @@ function InitDemo() {
        var texture = createAndSetupTexture(gl);
        textures.push(texture);
     
-       // make the texture the same size as the canvas
+       // make the texture the same size as the image
+       console.log(image.height, image.width)
        gl.texImage2D(
-           gl.TEXTURE_2D, 0, gl.RGBA, canvas.width, canvas.height, 0,
+           gl.TEXTURE_2D, 0, gl.RGBA, image.width, image.height, 0,
            gl.RGBA, gl.UNSIGNED_BYTE, null);
     
        // Create a framebuffer
@@ -187,13 +196,13 @@ function InitDemo() {
     nextTexture = nextTexture || originalImageTexture; 
       
     function drawWaves(time, movement) {
-      gl.uniform1f(offsetLocation, movement.texture_offset);
+      gl.uniform1f(offsetLocation, movement.texture_offset[0], movement.texture_offset[1]);
       gl.uniform1f(xScaleBaseLocation, movement.xScaleBase);
       gl.uniform1f(yScaleBaseLocation, movement.yScaleBase);
-      gl.uniform1f(xScaleVarienceLocation, movement.xScaleVarience);
-      gl.uniform1f(yScaleVarienceLocation, movement.yScaleVarience);
-      gl.uniform1f(xSkewVarienceLocation, movement.xSkewVarience);
-      gl.uniform1f(ySkewVarienceLocation, movement.ySkewVarience);
+      gl.uniform1f(xScaleVarianceLocation, movement.xScaleVariance);
+      gl.uniform1f(yScaleVarianceLocation, movement.yScaleVariance);
+      gl.uniform1f(xSkewVarianceLocation, movement.xSkewVariance);
+      gl.uniform1f(ySkewVarianceLocation, movement.ySkewVariance);
       gl.uniform1f(initialXLocation, movement.initialX);
       gl.uniform1f(initialYLocation, movement.initialY);
       gl.uniform1f(xTranslateLocation, movement.translateX);
@@ -205,17 +214,17 @@ function InitDemo() {
     let wave1Movement = {
       xScaleBase: 1.45,
       yScaleBase: 1.5,
-      xScaleVarience: 0.1,
-      yScaleVarience: 0.1,
-      xSkewVarience: 0.0,
-      ySkewVarience: 0.0,
+      xScaleVariance: 0.1,
+      yScaleVariance: 0.1,
+      xSkewVariance: 0.0,
+      ySkewVariance: 0.0,
       initialX: 0.0,
       initialY: 0.1,
       translateX: 0.0,
       translateY: 0.0,
       delay: 4.5,
       speed: 0.0015,
-      texture_offset: 0.0,
+      texture_offset: [200.0, 200,0],
       period: 11,
       zindex: 1,
       
@@ -228,10 +237,10 @@ function InitDemo() {
     let wave2Movement = {
       xScaleBase: 1.4,
       yScaleBase: 1.3,
-      xScaleVarience: 0.1,
-      yScaleVarience: 0.1,
-      xSkewVarience: 0.0,
-      ySkewVarience: 0.0,
+      xScaleVariance: 0.1,
+      yScaleVariance: 0.1,
+      xSkewVariance: 0.0,
+      ySkewVariance: 0.0,
       initialX: 0.0,
       initialY: -0.3,
       translateX: 0.0,
@@ -251,10 +260,10 @@ function InitDemo() {
     let wave3Movement = {
       xScaleBase: 1.3,
       yScaleBase: 0.6,
-      xScaleVarience: 0.2,
-      yScaleVarience: 0.0,
-      xSkewVarience: 0.3,
-      ySkewVarience: 0.0,
+      xScaleVariance: 0.2,
+      yScaleVariance: 0.0,
+      xSkewVariance: 0.3,
+      ySkewVariance: 0.0,
       initialX: 0.0,
       initialY: -0.5,
       translateX: 0.0,
@@ -274,10 +283,10 @@ function InitDemo() {
     let wave4Movement = {
       xScaleBase: 1.3,
       yScaleBase: 1.2,
-      xScaleVarience: 0.0,
-      yScaleVarience: -0.1,
-      xSkewVarience: -0.1,
-      ySkewVarience: 0.0,
+      xScaleVariance: 0.0,
+      yScaleVariance: -0.1,
+      xSkewVariance: -0.1,
+      ySkewVariance: 0.0,
       initialX: 0.0,
       initialY: -0.8,
       translateX: 0.0,
@@ -298,10 +307,10 @@ function InitDemo() {
     let wave5Movement = {
       xScaleBase: 1.7,
       yScaleBase: 0.5,
-      xScaleVarience: -0.2,
-      yScaleVarience: 0.1,
-      xSkewVarience: 0.3,
-      ySkewVarience: 0.0,
+      xScaleVariance: -0.2,
+      yScaleVariance: 0.1,
+      xSkewVariance: 0.3,
+      ySkewVariance: 0.0,
       initialX: 0.15,
       initialY: 0.15,
       translateX: 0.0,
@@ -322,10 +331,10 @@ function InitDemo() {
     let wave6Movement = {
       xScaleBase: 1.5,
       yScaleBase: 1.3,
-      xScaleVarience: 0.15,
-      yScaleVarience: 0.15,
-      xSkewVarience: 0.2,
-      ySkewVarience: 0.0,
+      xScaleVariance: 0.15,
+      yScaleVariance: 0.15,
+      xSkewVariance: 0.2,
+      ySkewVariance: 0.0,
       initialX: 0.0,
       initialY: 0.4,
       translateX: 0.0,
@@ -346,10 +355,10 @@ function InitDemo() {
     let wave7Movement = {
       xScaleBase: 0.8,
       yScaleBase: 1.0,
-      xScaleVarience: 0.1,
-      yScaleVarience: 0.25,
-      xSkewVarience: 0.15,
-      ySkewVarience: 0.0,
+      xScaleVariance: 0.1,
+      yScaleVariance: 0.25,
+      xSkewVariance: 0.15,
+      ySkewVariance: 0.0,
       initialX: 0.3,
       initialY: 0.4,
       translateX: 0.0,
@@ -370,10 +379,10 @@ function InitDemo() {
     let wave8Movement = {
       xScaleBase: 1.5,
       yScaleBase: 0.8,
-      xScaleVarience: 0.0,
-      yScaleVarience: -0.05,
-      xSkewVarience: 0.2,
-      ySkewVarience: 0.0,
+      xScaleVariance: 0.0,
+      yScaleVariance: -0.05,
+      xSkewVariance: 0.2,
+      ySkewVariance: 0.0,
       initialX: -0.11,
       initialY: 0.3,
       translateX: 0.0,
@@ -398,84 +407,147 @@ function InitDemo() {
 
     function clipAndPosition(time) {
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-      // resizeCanvasToDisplaySize(gl.canvas); // can't resize?
+      resizeCanvasToDisplaySize(gl.canvas); // can't resize?
       waveDeltaTime = time - waveStartTime;
       drawWaves(waveDeltaTime, wave1Movement);
-      drawWaves(waveDeltaTime, wave2Movement);
-      drawWaves(waveDeltaTime, wave3Movement);
-      drawWaves(waveDeltaTime, wave4Movement);
-      drawWaves(waveDeltaTime, wave5Movement);
-      drawWaves(waveDeltaTime, wave6Movement);
-      drawWaves(waveDeltaTime, wave7Movement);
-      drawWaves(waveDeltaTime, wave8Movement);
+      // drawWaves(waveDeltaTime, wave2Movement);
+      // drawWaves(waveDeltaTime, wave3Movement);
+      // drawWaves(waveDeltaTime, wave4Movement);
+      // drawWaves(waveDeltaTime, wave5Movement);
+      // drawWaves(waveDeltaTime, wave6Movement);
+      // drawWaves(waveDeltaTime, wave7Movement);
+      // drawWaves(waveDeltaTime, wave8Movement);
     
     }
-    let blur = 0;
-    function animate(time) {
-      // console.log("animate: ", gl.getUniform(program, timeLocation));
+  
 
+    let blur = 0;
+    let oldBlur = 0;
+    function animate(time) {
       // Start blur counter, then count down after click
-      blur = Math.min(Math.floor((time * .0004)), 15);
-      gl.useProgram(program); // Use clip and move program
-      if (!blur) {
+      blur = Math.min(Math.floor((time * .008)), 125);
+      if (!blur) { // can get rid of this
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
+        gl.viewport(0, 0, canvas.width, canvas.height);
+      
+        gl.useProgram(program); // Use clip and move program
         gl.bindTexture(gl.TEXTURE_2D, nextTexture);
-        clipAndPosition(time); // clip and move
+        clipAndPosition(time); // clip and move (and draw)
         myReq = window.requestAnimationFrame(animate);
         return;
       }
-      // Use first frame buffer
-      gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[0]);
-      gl.bindTexture(gl.TEXTURE_2D, nextTexture);
-      clipAndPosition(time); // clip and move
-
-      for (let i = 0; i <= blur; i++) {
-        nextTexture = textures[0];
-        //Use second framebuffer 
+    
+      if (blur > oldBlur) {
+        //Use first framebuffer 
         gl.useProgram(blurProgram); // Use blur program
-        gl.uniform2f(textureSizeLocation, canvas.width, canvas.height);
+        console.log(image.height, image.width, canvas.height, canvas.width);
         gl.uniform1fv(kernelLocation, gb2pass);
+        gl.uniform2f(textureSizeLocation, image.width, image.height);
         gl.uniform2f(blurResolutionLocation, canvas.width, canvas.height);
+        gl.viewport(0, 0, image.width, image.height);
         gl.uniform1i(blurImageLocation, 0);
         gl.uniform2f(directionLocation, 0.0, 1.0); // Blur vertical
-        
-        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[1]);
+    
+        // gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[0]);
+        gl.viewport(0, 0, image.width, image.height);
+                
         gl.bindTexture(gl.TEXTURE_2D, nextTexture);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        gl.drawArrays(gl.TRIANGLES, 0, 6); //just draw and blur
-        nextTexture = textures[1];
-        gl.uniform2f(directionLocation, 1.0, 0.0); // Blur horizontal
+        gl.drawArrays(gl.TRIANGLES, 0, 6); // just blur
+
+        nextTexture = textures[0];
         
-        // Draw to canvas or framebuffer
-        gl.bindFramebuffer(gl.FRAMEBUFFER, i == blur? null : framebuffers[0]);
+        gl.uniform2f(directionLocation, 1.0, 0.0); // Blur horizontal
+        gl.uniform2f(textureSizeLocation, image.width, image.height);
+        gl.uniform2f(blurResolutionLocation, canvas.width, canvas.height);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[1]);
+        gl.viewport(0, 0, image.width, image.height);
         gl.bindTexture(gl.TEXTURE_2D, nextTexture);
-        gl.drawArrays(gl.TRIANGLES, 0, 6); //just draw and blur
+        gl.drawArrays(gl.TRIANGLES, 0, 6); //just blur
+        oldBlur = blur;
       }
-      nextTexture = originalImageTexture;
+      nextTexture = textures[1];
+      // gl.uniform2f(directionLocation, 1.0, 0.0); // Blur horizontal
+      // gl.uniform2f(textureSizeLocation, image.width, image.height);
+      // gl.uniform2f(blurResolutionLocation, canvas.width, canvas.height);
+      // gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      // gl.viewport(0, 0, image.width, image.height);
+      // gl.bindTexture(gl.TEXTURE_2D, nextTexture);
+      // gl.drawArrays(gl.TRIANGLES, 0, 6); //just blur
+      
+      gl.useProgram(program);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      clipAndPosition(time); // clip and move (and draw)
+      
       myReq = window.requestAnimationFrame(animate);
     }
+
+    // function animate(time) {
+    //   // Start blur counter, then count down after click
+    //   blur = Math.min(Math.floor((time * .004)), 15);
+    //   gl.useProgram(program); // Use clip and move program
+    //   if (!blur) {
+    //     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    //     gl.bindTexture(gl.TEXTURE_2D, nextTexture);
+    //     clipAndPosition(time); // clip and move
+    //     myReq = window.requestAnimationFrame(animate);
+    //     return;
+    //   }
+    //   // Use first frame buffer
+    //   gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[0]);
+    //   gl.bindTexture(gl.TEXTURE_2D, nextTexture);
+    //   clipAndPosition(time); // clip and move
+    // 
+    //   for (let i = 0; i <= blur; i++) {
+    //     nextTexture = textures[0];
+    //     //Use second framebuffer 
+    //     gl.useProgram(blurProgram); // Use blur program
+    //     gl.uniform2f(textureSizeLocation, canvas.width, canvas.height);
+    //     gl.uniform1fv(kernelLocation, gb2pass);
+    //     gl.uniform2f(blurResolutionLocation, canvas.width, canvas.height);
+    //     gl.uniform1i(blurImageLocation, 0);
+    //     gl.uniform2f(directionLocation, 0.0, 1.0); // Blur vertical
+    // 
+    //     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[1]);
+    //     gl.bindTexture(gl.TEXTURE_2D, nextTexture);
+    //     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    //     gl.drawArrays(gl.TRIANGLES, 0, 6); //just draw and blur
+    //     nextTexture = textures[1];
+    //     gl.uniform2f(directionLocation, 1.0, 0.0); // Blur horizontal
+    // 
+    //     // Draw to canvas or framebuffer
+    //     gl.bindFramebuffer(gl.FRAMEBUFFER, i == blur? null : framebuffers[0]);
+    //     gl.bindTexture(gl.TEXTURE_2D, nextTexture);
+    //     gl.drawArrays(gl.TRIANGLES, 0, 6); //just draw and blur
+    //   }
+    //   nextTexture = originalImageTexture;
+    //   myReq = window.requestAnimationFrame(animate);
+    // }
     requestAnimationFrame(animate);
     
     // Change to rotation/spin shaders on click
     function handleClick () {
       gl.useProgram(program);
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      gl.bindTexture(gl.TEXTURE_2D, nextTexture);
+      gl.bindTexture(gl.TEXTURE_2D, originalImageTexture);
       scene.dataset.signIn = 'true';
 
       function drawWaveSpin (time, movement) {
-        gl.uniform1f(offsetLocation, movement.texture_offset);
+        gl.uniform1f(offsetLocation, movement.texture_offset[0], movement.texture_offset[1]);
         gl.uniform1f(xScaleBaseLocation, movement.xScaleBase);
         gl.uniform1f(yScaleBaseLocation, movement.yScaleBase);
-        gl.uniform1f(xScaleVarienceLocation, movement.xScaleVarience);
-        gl.uniform1f(yScaleVarienceLocation, movement.yScaleVarience);
-        gl.uniform1f(xSkewVarienceLocation, movement.xSkewVarience);
-        gl.uniform1f(ySkewVarienceLocation, movement.ySkewVarience);
+        gl.uniform1f(xScaleVarianceLocation, movement.xScaleVariance);
+        gl.uniform1f(yScaleVarianceLocation, movement.yScaleVariance);
+        gl.uniform1f(xSkewVarianceLocation, movement.xSkewVariance);
+        gl.uniform1f(ySkewVarianceLocation, movement.ySkewVariance);
         gl.uniform1f(initialXLocation, movement.initialX);
         gl.uniform1f(initialYLocation, movement.initialY);
         gl.uniform1f(xTranslateLocation, movement.translateX);
         gl.uniform1f(yTranslateLocation, movement.translateY);
-        // gl.uniform1f(zIndexLocation, movement.zindex);
         gl.uniform1f(timeLocation, ((waveDeltaTime * movement.speed) + movement.delay) % movement.period);
         
       
@@ -511,7 +583,6 @@ function InitDemo() {
     document.getElementById("sign-in").onclick = handleClick;
   }
 }
-
 
 
 

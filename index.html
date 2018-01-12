@@ -42,37 +42,6 @@
     v_texCoord = a_texCoord;
   }
   </script>
-
-  <script id="2d-fragment-shader-blur" type="x-shader/x-fragment">
-    precision lowp float;
-    
-    uniform sampler2D u_image;
-    uniform vec2 dir;
-    uniform vec2 u_textureSize;
-    uniform float u_kernel[9];
-
-    varying vec2 v_texCoord;
-    void main() {
-      float hstep = dir.x;
-      float vstep = dir.y;
-      vec2 onePixel = vec2(1.0, 1.0) / u_textureSize;
-      
-      // Blur
-      vec4 color =   
-         texture2D(u_image, v_texCoord + onePixel * vec2(-4.0*hstep, -4.0*vstep)) * u_kernel[0] +
-         texture2D(u_image, v_texCoord + onePixel * vec2(-3.0*hstep, -3.0*vstep)) * u_kernel[1] +
-         texture2D(u_image, v_texCoord + onePixel * vec2(-2.0*hstep, -2.0*vstep)) * u_kernel[2] +
-         texture2D(u_image, v_texCoord + onePixel * vec2(-1.0*hstep, -1.0*vstep)) * u_kernel[3] +
-         texture2D(u_image, v_texCoord + onePixel * vec2( 0.0,  0.0)) * u_kernel[4] +
-         texture2D(u_image, v_texCoord + onePixel * vec2( 1.0*hstep,  1.0*vstep)) * u_kernel[5] +
-         texture2D(u_image, v_texCoord + onePixel * vec2( 2.0*hstep,  2.0*vstep)) * u_kernel[6] +
-         texture2D(u_image, v_texCoord + onePixel * vec2( 3.0*hstep,  3.0*vstep)) * u_kernel[7] + 
-         texture2D(u_image, v_texCoord + onePixel * vec2( 4.0*hstep,  4.0*vstep)) * u_kernel[8];
-      
-      gl_FragColor = color;
-      gl_FragColor.rgb *= gl_FragColor.a;
-    }
-  </script>
   
   <script id="2d-vertex-shader" type="x-shader/x-vertex">
   precision lowp float;
@@ -87,10 +56,10 @@
   uniform float u_y_coord;
   uniform float u_y_scale_base;
   uniform float u_x_scale_base;
-  uniform float u_y_scale_varience;
-  uniform float u_x_scale_varience;
-  uniform float u_y_skew_varience;
-  uniform float u_x_skew_varience;
+  uniform float u_y_scale_variance;
+  uniform float u_x_scale_variance;
+  uniform float u_y_skew_variance;
+  uniform float u_x_skew_variance;
   uniform float u_y_translate;
   uniform float u_x_translate;
   uniform float u_z_index;
@@ -125,12 +94,12 @@
     
     float time = max(u_time, 3.0 * PI/2.0);
     time = min(time, 7.0 * PI/2.0);
-    float y_scale = u_y_scale_base + u_y_scale_varience * (sin(time) + 1.0);
-    float x_scale = u_x_scale_base + u_x_scale_varience * (sin(time) + 1.0);
+    float y_scale = u_y_scale_base + u_y_scale_variance * (sin(time) + 1.0);
+    float x_scale = u_x_scale_base + u_x_scale_variance * (sin(time) + 1.0);
     zeroToOne = scale(vec2(x_scale, y_scale)) * zeroToOne;
     
-    float x_skew = u_x_skew_varience * (sin(time) + 1.0);
-    float y_skew = u_y_skew_varience * (sin(time) + 1.0);
+    float x_skew = u_x_skew_variance * (sin(time) + 1.0);
+    float y_skew = u_y_skew_variance * (sin(time) + 1.0);
     zeroToOne = zeroToOne * skew(vec2(x_skew, y_skew));
     
     zeroToOne -= vec2(u_x_coord, u_y_coord); //initial positioning
@@ -162,8 +131,8 @@
     precision lowp float;
     
     uniform sampler2D u_image;
-    uniform float u_width;
-    uniform float u_offset;
+    uniform float u_size;
+    uniform vec2 u_offset;
     uniform float u_spin_time_frag;
 
     varying vec2 v_texCoord;
@@ -171,8 +140,8 @@
     void main() {
 
       vec2 texture_point = v_texCoord;
-      texture_point.x *= u_width;
-      texture_point.x += u_offset;
+      texture_point *= u_size;
+      texture_point += u_offset;
       vec4 color = texture2D(u_image, texture_point);
 
       
@@ -183,34 +152,72 @@
       color.g = v_texCoord.y;
       
       gl_FragColor = color;
+      // gl_FragColor *= gl_FragColor.a;
       gl_FragColor.rgb *= gl_FragColor.a;
     }
   </script>
   
-  <script id="2d-fragment-shader-spin" type="x-shader/x-fragment">
+  <script id="2d-fragment-shader-blur" type="x-shader/x-fragment">
     precision lowp float;
     
     uniform sampler2D u_image;
-    uniform float u_spin_time;
-    uniform float u_width;
-    uniform float u_offset;
+    uniform vec2 dir;
+    uniform vec2 u_textureSize;
+    uniform float u_kernel[9];
 
-    // the texCoords passed in from the vertex shader.
     varying vec2 v_texCoord;
-    
     void main() {
-      vec2 texture_point = v_texCoord;
-      // Select the correct potion of the image atlas map
-      texture_point.x *= u_width;
-      texture_point.x += u_offset;
-      vec4 color = texture2D(u_image, texture_point);
-      // color.a = smoothstep(0.00, 0.01, color.r + color.g + color.b);
-      color.a = min(0.8, color.a);
-      color.r = u_spin_time;
-      // color.a = step(0.01, color.r + color.g + color.b); // remove black and make it transparent
-      color.b = v_texCoord.x;
-      color.g = v_texCoord.y;
+      float a_kernel[9];
+      float hstep = dir.x;
+      float vstep = dir.y;
+      vec2 onePixel = vec2(1.0, 1.0) / u_textureSize;
+      
+      vec4 color = texture2D(u_image, v_texCoord);
+        
+      // Blur
+      color.a =
+         texture2D(u_image, v_texCoord + onePixel * vec2(-4.0*hstep, -4.0*vstep)).a * u_kernel[0] +
+         texture2D(u_image, v_texCoord + onePixel * vec2(-3.0*hstep, -3.0*vstep)).a * u_kernel[1] +
+         texture2D(u_image, v_texCoord + onePixel * vec2(-2.0*hstep, -2.0*vstep)).a * u_kernel[2] +
+         texture2D(u_image, v_texCoord + onePixel * vec2(-1.0*hstep, -1.0*vstep)).a * u_kernel[3] +
+         texture2D(u_image, v_texCoord + onePixel * vec2( 0.0,  0.0)).a * u_kernel[4] +
+         texture2D(u_image, v_texCoord + onePixel * vec2( 1.0*hstep,  1.0*vstep)).a * u_kernel[5] +
+         texture2D(u_image, v_texCoord + onePixel * vec2( 2.0*hstep,  2.0*vstep)).a * u_kernel[6] +
+         texture2D(u_image, v_texCoord + onePixel * vec2( 3.0*hstep,  3.0*vstep)).a * u_kernel[7] + 
+         texture2D(u_image, v_texCoord + onePixel * vec2( 4.0*hstep,  4.0*vstep)).a * u_kernel[8];
+         
+     color.a = color.a/ 23.0; 
+      
+      // calculate a_kernel & a_kernel_sum
+      // a_kernel[0] = step(0.00000001, texture2D(u_image, v_texCoord + onePixel * vec2(-4.0*hstep, -4.0*vstep)).a) * u_kernel[0];
+      // a_kernel[1] = step(0.00000001, texture2D(u_image, v_texCoord + onePixel * vec2(-3.0*hstep, -3.0*vstep)).a) * u_kernel[1];
+      // a_kernel[2] = step(0.00000001, texture2D(u_image, v_texCoord + onePixel * vec2(-2.0*hstep, -2.0*vstep)).a) * u_kernel[2];
+      // a_kernel[3] = step(0.00000001, texture2D(u_image, v_texCoord + onePixel * vec2(-1.0*hstep, -1.0*vstep)).a) * u_kernel[3];
+      // a_kernel[4] = step(0.00000001, texture2D(u_image, v_texCoord + onePixel * vec2( 0.0,  0.0)).a) * u_kernel[4];
+      // a_kernel[5] = step(0.00000001, texture2D(u_image, v_texCoord + onePixel * vec2( 1.0*hstep,  1.0*vstep)).a) * u_kernel[5];
+      // a_kernel[6] = step(0.00000001, texture2D(u_image, v_texCoord + onePixel * vec2( 2.0*hstep,  2.0*vstep)).a) * u_kernel[6];
+      // a_kernel[7] = step(0.00000001, texture2D(u_image, v_texCoord + onePixel * vec2( 3.0*hstep,  3.0*vstep)).a) * u_kernel[7];
+      // a_kernel[8] = step(0.00000001, texture2D(u_image, v_texCoord + onePixel * vec2( 4.0*hstep,  4.0*vstep)).a) * u_kernel[8];
+      // 
+      // float a_kernel_sum = a_kernel[0] + a_kernel[1] + a_kernel[2] + a_kernel[3] + a_kernel[4] + a_kernel[5] + a_kernel[6] + a_kernel[7] + a_kernel[8];
+      
+      // color.rgb = 
+      //   texture2D(u_image, v_texCoord + onePixel * vec2(-4.0*hstep, -4.0*vstep)).rgb * a_kernel[0] +
+      //   texture2D(u_image, v_texCoord + onePixel * vec2(-3.0*hstep, -3.0*vstep)).rgb * a_kernel[1] +
+      //   texture2D(u_image, v_texCoord + onePixel * vec2(-2.0*hstep, -2.0*vstep)).rgb * a_kernel[2] +
+      //   texture2D(u_image, v_texCoord + onePixel * vec2(-1.0*hstep, -1.0*vstep)).rgb * a_kernel[3] +
+      //   texture2D(u_image, v_texCoord + onePixel * vec2( 0.0,  0.0)).rgb * a_kernel[4] +
+      //   texture2D(u_image, v_texCoord + onePixel * vec2( 1.0*hstep,  1.0*vstep)).rgb * a_kernel[5] +
+      //   texture2D(u_image, v_texCoord + onePixel * vec2( 2.0*hstep,  2.0*vstep)).rgb * a_kernel[6] +
+      //   texture2D(u_image, v_texCoord + onePixel * vec2( 3.0*hstep,  3.0*vstep)).rgb * a_kernel[7] + 
+      //   texture2D(u_image, v_texCoord + onePixel * vec2( 4.0*hstep,  4.0*vstep)).rgb * a_kernel[8] /
+      //   a_kernel_sum;
+      
+      // color.rgb = color.rgb / a_kernel_sum;
+      // color.a = min(0.9, color.a);
       gl_FragColor = color;
+      // gl_FragColor *= gl_FragColor.a;
+      // gl_FragColor.rgb = gl_FragColor.rgb * gl_FragColor.a;
     }
   </script>
   
